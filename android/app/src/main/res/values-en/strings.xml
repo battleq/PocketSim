@@ -1,0 +1,842 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PocketSim · English strings -->
+<resources>
+    <string name="app_name">PocketSim</string>
+
+    <!-- ============ Common ============ -->
+    <string name="btn_back">Back</string>
+    <string name="btn_retry">Retry</string>
+    <string name="error_unknown">Error: %1$s</string>
+
+    <!-- ============ Disclaimer ============ -->
+    <string name="disclaimer_short">Results are for casual reference only, not for professional engineering</string>
+    <string name="disclaimer_full">Disclaimer: All calculation results in this app are generated from simplified mechanical models and representative material values. They are for rough reference in everyday scenarios only and cannot replace professional engineering analysis. For any matter involving personal safety, structural safety, or significant property safety, please consult a professional engineer. All consequences arising from the use of this app are borne by the user.</string>
+    <string name="share_watermark">For reference only</string>
+
+    <!-- ============ Home ============ -->
+    <string name="home_title">PocketSim</string>
+    <string name="home_problem_label">Describe your problem</string>
+    <string name="home_problem_placeholder_frame">e.g. A double-deck bookshelf made of 30×40 pine lumber against a wall, 400 wide × 1500 tall, each shelf holds 20 kg of books. Will it wobble? (attach a photo of the structure)</string>
+    <string name="home_btn_ai">AI Model</string>
+    <string name="polish_action">AI Polish</string>
+    <string name="polish_undo">Undo polish</string>
+    <string name="polish_done">Polished</string>
+    <string name="home_hint_ai_off">AI is not configured or unreachable. Please fill in the API settings first.</string>
+    <string name="home_examples_header">Examples</string>
+    <string name="home_example_fill">Fill</string>
+    <string name="home_example_cat_structure">Load-bearing structures</string>
+    <string name="home_example_cat_thermal">Thermal · transient</string>
+    <string name="home_example_cat_fluid">Wind &amp; seepage</string>
+    <string name="home_example_cat_solid">3D solids</string>
+    <string-array name="home_examples_structure">
+        <item>A pine shelf 80 cm long, 20 cm wide, 3 cm thick, fixed to the wall with expansion bolts at one end, with 10 kg of books on the far end. What is the maximum deflection?</item>
+        <item>A double-deck bookshelf made of 30×40 mm pine lumber, 80 wide × 1500 tall × 30 deep cm, four corner posts fixed to the floor, each shelf holds 20 kg of books. Will it wobble?</item>
+        <item>A 1.2 m aluminum square tube (40×40×2 mm) simply supported on both ends against walls, with 5 kg of wet clothes hanging in the middle. Will it bend?</item>
+    </string-array>
+    <string-array name="home_examples_thermal">
+        <item>A 2 m low-carbon steel pipe (OD 50 mm, wall 3 mm) welded to walls at both ends, heated from 20°C to 150°C. Will the welds crack from thermal expansion?</item>
+        <item>An 80 cm aluminum square tube (20×20×2 mm) cantilevered from a wall, with 10 kg hanging at the free end, temperature goes from 20°C to 80°C and back to 20°C. Any problem?</item>
+    </string-array>
+    <string-array name="home_examples_fluid">
+        <item>On a windy day (Beaufort 8), a 2 m tall, 3 m long, 24 cm thick brick wall, fixed at the base, exposed to wind pressure. Will it be blown over?</item>
+        <item>A 12 m tall concrete gravity dam with upstream water level 11 m. Will the dam foundation leak or slide?</item>
+    </string-array>
+    <string-array name="home_examples_solid">
+        <item>A vertical glass panel on the side of a fish tank, 60 cm long, 40 cm tall, 8 mm thick, glued to the tank at the bottom and both sides, open at the top, filled with water (40 cm deep) pressing from one side. Will the glass crack?</item>
+        <item>A 1.2 m long, 0.6 m wide, 10 cm thick reinforced concrete balcony slab, supported on all four sides, with 4 adults (≈300 kg total) standing on it. Will the slab crack?</item>
+        <item>A steel plate 1 m long, 0.5 m wide and 20 mm thick is fixed at the left edge and pulled in-plane with a 200 kN force at the right edge. A 16 cm diameter through-hole is drilled at its center. Will it crack at the hole edge due to stress concentration, and where does the peak stress occur?</item>
+    </string-array>
+    <!-- Imperial examples (used when Imperial units are selected; temperatures stay in °C, wind in Beaufort) -->
+    <string-array name="home_examples_structure_imperial">
+        <item>A pine shelf 32 in long, 8 in wide, 1-1/4 in thick, fixed to the wall with expansion bolts at one end, with 22 lb of books on the far end. What is the maximum deflection?</item>
+        <item>A double-deck bookshelf made of 1-1/4 × 1-1/2 in pine lumber, 32 in wide × 59 in tall × 12 in deep, four corner posts fixed to the floor, each shelf holds 44 lb of books. Will it wobble?</item>
+        <item>A 4 ft aluminum square tube (1-1/2 × 1-1/2 × 1/16 in) simply supported on both ends against walls, with 11 lb of wet clothes hanging in the middle. Will it bend?</item>
+    </string-array>
+    <string-array name="home_examples_thermal_imperial">
+        <item>An 80 in low-carbon steel pipe (OD 2 in, wall 1/8 in) welded to walls at both ends, heated from 20°C to 150°C. Will the welds crack from thermal expansion?</item>
+        <item>A 32 in aluminum square tube (3/4 × 3/4 × 1/16 in) cantilevered from a wall, with 22 lb hanging at the free end, temperature goes from 20°C to 80°C and back to 20°C. Any problem?</item>
+    </string-array>
+    <string-array name="home_examples_fluid_imperial">
+        <item>On a windy day (Beaufort 8), a 6.5 ft tall, 10 ft long, 9-1/2 in thick brick wall, fixed at the base, exposed to wind pressure. Will it be blown over?</item>
+        <item>A 39 ft tall concrete gravity dam with upstream water level 36 ft. Will the dam foundation leak or slide?</item>
+    </string-array>
+    <string-array name="home_examples_solid_imperial">
+        <item>A vertical glass panel on the side of a fish tank, 24 in long, 16 in tall, 5/16 in thick, glued to the tank at the bottom and both sides, open at the top, filled with water (16 in deep) pressing from one side. Will the glass crack?</item>
+        <item>A 4 ft long, 2 ft wide, 4 in thick reinforced concrete balcony slab, supported on all four sides, with 4 adults (≈660 lb total) standing on it. Will the slab crack?</item>
+        <item>A steel plate 40 in long, 20 in wide and 3/4 in thick is fixed at the left edge and pulled in-plane with a 45,000 lb force at the right edge. A 6.3 in diameter through-hole is drilled at its center. Will it crack at the hole edge due to stress concentration, and where does the peak stress occur?</item>
+    </string-array>
+
+    <!-- ============ AI Skills ============ -->
+    <string name="home_skill_header">AI Skills</string>
+    <string name="home_skill_none">None</string>
+    <string name="home_skill_custom">＋ Custom</string>
+    <string name="home_skill_conservative_name">Conservative check</string>
+    <string name="home_skill_conservative_brief">Worst-case conditions and conservative values; safety first</string>
+    <string name="home_skill_quick_name">Quick estimate</string>
+    <string name="home_skill_quick_brief">Simplified model, fewer members, order-of-magnitude answer</string>
+    <string name="skill_dialog_title">Custom AI Skill</string>
+    <string name="skill_manager_hint">Custom skills are appended to the AI for this modeling session. They only adjust modeling orientation, not output format. Built-in skills cannot be modified.</string>
+    <string name="skill_empty">No custom skills yet. Create one below.</string>
+    <string name="skill_new">New custom skill</string>
+    <string name="skill_editing">Editing: %1$s</string>
+    <string name="skill_name_label">Skill name</string>
+    <string name="skill_brief_label">Use case (one sentence)</string>
+    <string name="skill_instruction_label">Instruction to AI</string>
+    <string name="skill_save">Save</string>
+    <string name="skill_close">Close</string>
+    <string name="skill_edit">Edit</string>
+    <string name="skill_delete">Delete</string>
+    <string name="skill_cancel_edit">Cancel edit</string>
+    <string name="skill_required">Skill name and instruction to AI cannot be empty</string>
+
+    <!-- ============ AI Chat ============ -->
+    <string name="chat_title">AI Chat</string>
+    <string name="chat_rebuild_original">[Original request] %1$s\n\n</string>
+    <string name="chat_rebuild_feedback">[User feedback: the previous model was unreasonable — rebuild according to the following]\n</string>
+    <string name="chat_input_placeholder">Add description, or answer the question above…</string>
+    <string name="chat_loading">Thinking</string>
+    <string name="chat_error_network">AI service unavailable (no network, no API key, or endpoint error). Check network &amp; settings, or describe the structure more fully in text.</string>
+    <string name="chat_done">Model is ready. Go to preview to confirm.</string>
+    <string name="chat_add_photo">Add structure photo</string>
+    <string name="chat_remove_photo">Remove photo</string>
+    <string name="home_take_photo">Take photo</string>
+    <string name="home_section_model">Model</string>
+    <string name="home_section_material">Material Definition</string>
+    <string name="home_params_box_title">Modeling Parameters (optional)</string>
+    <string name="chat_photo_attached_fmt">%1$d photo(s) attached</string>
+
+    <!-- ============ Param Confirmation ============ -->
+    <string name="param_title">Parameter Confirmation</string>
+    <string name="param_from_ai_tag">AI has pre-filled the following parameters based on your description. You may modify anytime.</string>
+    <string name="param_from_offline_tag">Offline parser has pre-filled the following parameters. You may modify anytime.</string>
+    <string name="param_pending_tag">To be filled</string>
+    <string name="param_pending_hint">Offline parser did not get this value. Please fill in or confirm.</string>
+    <string name="param_material_header">Material</string>
+    <string name="param_material_pick">Select material</string>
+    <string name="param_material_manual">Enter material name manually</string>
+    <string name="param_material_lookup">Look up material online</string>
+    <string name="param_material_lookup_ing">Looking up material parameters online…</string>
+    <string name="param_material_lookup_failed">Lookup failed: %1$s</string>
+    <string name="param_material_missing">Template has no material parameters</string>
+    <string name="param_mesh_header">Mesh level</string>
+    <string name="mesh_coarse">Coarse (fastest)</string>
+    <string name="mesh_medium">Medium (recommended)</string>
+    <string name="mesh_fine">Fine (slowest)</string>
+    <string name="mesh_ultra">Ultra-fine (highest accuracy)</string>
+    <string name="param_btn_run">Run</string>
+    <string name="param_running">Solving locally…</string>
+    <string name="param_run_failed">Solve failed: %1$s</string>
+    <string name="param_value_invalid">Invalid value</string>
+    <string name="param_required_missing">Required</string>
+
+    <!-- Source tags -->
+    <string name="source_builtin">Built-in</string>
+    <string name="source_ai">AI</string>
+    <string name="source_web">Web</string>
+    <string name="source_user">User</string>
+
+    <!-- ============ Result ============ -->
+    <string name="result_title">Result</string>
+    <string name="metric_max_deflection">Max deflection</string>
+    <string name="metric_max_stress">Max stress</string>
+    <string name="metric_safety">Safety factor</string>
+    <string name="unit_mm">mm</string>
+    <string name="unit_mpa">MPa</string>
+    <string name="safety_safe">Safe</string>
+    <string name="safety_caution">Caution</string>
+    <string name="safety_danger">Danger</string>
+    <string name="safety_unknown">—</string>
+    <string name="verdict_banner_danger_title">Verdict: Will fail</string>
+    <string name="verdict_banner_danger_body">Safety factor %1$s is below 1.0: member stress exceeds the material strength representative value. In actual use it will visibly bend or even break. Reduce load, thicken the section, or use stronger material and recompute.</string>
+    <string name="verdict_banner_caution_title">Verdict: Small margin, be careful</string>
+    <string name="verdict_banner_caution_body">Safety factor %1$s is below 2.0: deflection may be large under normal use, and risk is higher with material flaws or long-term loading. Reduce load or enlarge section for margin.</string>
+    <string name="verdict_banner_stress_fmt">Max stress %1$s (max-loaded: member %2$d)</string>
+    <string name="verdict_banner_weak_header">Weakest point &amp; failure mode</string>
+    <string name="verdict_banner_weak_fmt">Member %1$d (node %2$d→%3$d, %4$s %5$s): %6$s, stress %7$s ≈ %9$s× material strength %8$s</string>
+    <string name="verdict_banner_form_bending">Bending stress exceeded: transverse cracks first appear on the tension side at mid-span, then obvious sagging or fracture.</string>
+    <string name="verdict_banner_form_compress">Compression capacity exceeded: buckling or local instability first, then sudden collapse (not gradual bending).</string>
+    <string name="verdict_banner_form_axial">Axial stress exceeded: tension side cracks, compression side crushes.</string>
+    <string name="verdict_banner_advice_header">How to strengthen</string>
+    <string name="verdict_banner_advice_load_fmt">Reduce load: current load is %1$s× capacity. For safety margin (factor 1.5), reduce to about %2$s%% of current.</string>
+    <string name="verdict_banner_advice_section_fmt">Thicken section: increase bending height from %1$s to about %2$s (section %3$s → %4$s), stress drops to 1/%5$s.</string>
+    <string name="verdict_banner_advice_section_big_fmt">Thickening alone is impractical: to bring stress back to safe range, section height needs to be about %1$s× (%2$s → %3$s). Better change the structural form.</string>
+    <string name="verdict_banner_advice_span">Change structural form: add intermediate posts/supports or diagonal bracing. Bending moment drops roughly with the square of span (halve span, moment drops to ~1/4).</string>
+    <string name="verdict_banner_advice_material">Use stronger material (e.g. pine → birch, aluminum → steel), or reduce span and recompute.</string>
+    <string name="render_von_mises">Von Mises stress</string>
+    <string name="render_displacement">Displacement</string>
+    <string name="deform_scale_fmt">Deformation scaled %1$d×</string>
+    <string name="contour_title">Contour</string>
+    <string name="analogy_title">Everyday analogy</string>
+    <string name="analogy_default">The deformation magnitude is small. You can get an intuitive feel from the max deflection value.</string>
+    <string name="analysis_title">AI analysis process</string>
+    <string name="analysis_generated_note">This text is auto-generated by on-device rule templates, for reference only</string>
+    <string name="checks_title">Checks</string>
+    <string name="assumptions_title">Assumptions</string>
+    <string name="mesh_info_title">Mesh &amp; time</string>
+    <string name="mesh_info_fmt">%1$s mesh · %2$d DOF · %3$d elements · solved in %4$s ms</string>
+    <string name="share">Share</string>
+    <string name="share_chooser_title">Share result</string>
+    <string name="share_failed">Share failed: %1$s</string>
+    <string name="share_text_fmt">[PocketSim] %1$s: max deflection %2$s, max stress %3$s, safety factor %4$s (%5$s). For casual reference only, not for professional engineering.</string>
+    <string name="check_item_fmt">%1$s = %2$s / limit %3$s (safety factor %4$s)</string>
+
+    <!-- Downgrade notice -->
+    <string name="notice_downgraded">Mesh auto-downgraded</string>
+    <string name="notice_refined">Mesh auto-refined</string>
+    <string name="notice_reason_fmt">Reason: %1$s</string>
+    <string name="notice_downgraded_desc">To ensure smooth computation on phone, switched to a coarser mesh level. Slightly lower accuracy.</string>
+
+    <!-- ============ Frame modeling ============ -->
+    <string name="home_mode_frame">General structure · auto</string>
+    <string name="home_mode_frame_3d">3D structure</string>
+    <string name="home_mode_3d_beam">Space beam</string>
+    <string name="home_mode_3d_solid">3D solid · TET4</string>
+    <string name="home_mode_3d_beam_hint">Space frame/truss/table structure, 6-DOF beam elements</string>
+    <string name="home_mode_3d_solid_hint">Any 3D solid (box/cylinder/plate), internal stress &amp; deformation contour; wall wind load expressed as box + fixed base + pressure on windward face</string>
+    <string name="frame_chat_greeting">Hi! Send 1–3 photos of the structure, then add a one-line note (material, where fixed, how heavy the load is). I\'ll build a beam/frame model from the photos and compute deflection &amp; stress. I\'ll ask you for key info not visible in the photos. You can also just type a description.</string>
+    <string name="solid_chat_greeting">Hi! Tell me about the 3D solid to analyze: geometry, material, where fixed, what load (water pressure, soil pressure, wind pressure, surcharge, self-weight). e.g. A 60×40 cm, 8 mm thick fish tank glass panel, fixed at bottom and both sides, filled with 40 cm deep water. Will it crack?</string>
+    <string name="frame_chat_done">Model is ready. Go to preview to confirm.</string>
+    <string name="frame_preview_title">Model Preview</string>
+    <string name="frame_preview_hint">AI built the following model from your description. Member sections and material parameters are common representative values. Confirm before running. Results are for reference only.</string>
+    <string name="frame_summary_title">Model info</string>
+    <string name="frame_summary_fmt">%1$d nodes · %2$d members · %3$d supports</string>
+    <string name="frame_materials_fmt">Material: %1$s</string>
+    <string name="frame_supports_fmt">Supports: %1$s</string>
+    <string name="frame_loads_fmt">Loads: %1$s</string>
+    <string name="frame_members_title">Members</string>
+    <string name="frame_support_fixed">Fixed</string>
+    <string name="frame_support_pinned">Pinned</string>
+    <string name="frame_support_roller">Roller</string>
+    <string name="frame_load_force_fmt">Node %1$d point load %2$s</string>
+    <string name="frame_load_moment_fmt">Node %1$d moment %2$s</string>
+    <string name="frame_load_udl_fmt">Member %1$d UDL %2$s</string>
+    <string name="frame_load_area_fmt">Area load: %1$d members, total %2$s</string>
+    <string name="frame_load_thermal_fmt">Member %1$d ΔT %2$s°C</string>
+    <string name="frame_btn_run">Run</string>
+    <string name="frame_running">Solving locally…</string>
+    <string name="frame_run_failed">Solve failed: %1$s</string>
+    <string name="frame_result_title">Result</string>
+    <string name="frame_governing_fmt">Max-loaded: member %1$d</string>
+    <string name="frame_deform_title">Deformation</string>
+    <string name="frame_deform_note">Solid = deformed shape (scaled), dashed = original shape</string>
+    <string name="frame_3d_hint">3D view: one-finger drag to rotate · two-finger pinch to zoom</string>
+    <string name="frame_3d_reset">Reset view</string>
+    <string name="frame_buckling_title">Stability</string>
+    <string name="frame_thermal_title">Thermal</string>
+    <string name="frame_thermal_max_dt_fmt">Max ΔT: %1$s°C (ref 20°C)</string>
+    <string name="frame_thermal_over_temp">Over-temperature warning</string>
+    <string name="frame_thermal_note_fmt">Per-member ΔT: %1$s</string>
+    <string name="frame_narrative_title">Analysis</string>
+    <string name="frame_members_force_title">Member forces</string>
+    <string name="frame_member_tension">T</string>
+    <string name="frame_member_compression">C</string>
+    <string name="frame_info_fmt">%1$d nodes · %2$d members · %3$d supports · solved in %4$s ms</string>
+
+    <!-- ============ Follow-up / modify &amp; rerun ============ -->
+    <string name="frame_followup_title">Follow-up</string>
+    <string name="frame_followup_entry">Follow-up / modify &amp; rerun</string>
+    <string name="frame_back_home">Back to Home</string>
+    <string name="frame_pdf_export">Export PDF report</string>
+    <string name="frame_pdf_exporting">Generating PDF…</string>
+    <string name="frame_followup_greeting">Ask me anything about this result. To change conditions, just say it — e.g. \"increase weight to 30 kg\", \"switch to steel\", \"move load to upper shelf\". I\'ll update the model and you confirm before rerun.</string>
+    <string name="frame_followup_input_hint">Ask a question, or say what to change…</string>
+    <string name="frame_followup_summary_fmt">Max deflection %1$s · max stress %2$s · safety factor %3$s (%4$s)</string>
+    <string name="frame_followup_model_ready">Model updated with new conditions. Go to preview to confirm.</string>
+    <string name="frame_followup_validate_failed">This change failed validation: %1$s. Please describe the change more specifically.</string>
+
+    <!-- ============ Settings ============ -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_llm_header">AI API (OpenAI-compatible)</string>
+    <string name="settings_base_url">API Base URL</string>
+    <string name="settings_base_url_hint">e.g. https://ark.cn-beijing.volces.com/api/v3, https://api.deepseek.com (/chat/completions auto-appended)</string>
+    <string name="settings_api_key">API Key</string>
+    <string name="settings_model">Model name</string>
+    <string name="settings_model_hint">e.g. doubao-seed-2-0-pro-260215, deepseek-chat, kimi-k3.1-pro</string>
+    <!-- Provider presets: auto-detected from Base URL, one-click fill; Custom = generic OpenAI-compatible -->
+    <string name="settings_provider_label">Provider presets (one-click fill URL + model)</string>
+    <string name="settings_provider_kimi">Kimi (Moonshot)</string>
+    <string name="settings_provider_doubao">Doubao (Volcengine Ark)</string>
+    <string name="settings_provider_deepseek">DeepSeek</string>
+    <string name="settings_provider_custom">Custom (OpenAI / Anthropic-compatible)</string>
+    <string name="settings_provider_hint_kimi">Kimi always thinks — adjust reasoning effort &amp; high-speed mode below. Default https://api.moonshot.cn/v1</string>
+    <string name="settings_provider_hint_doubao">Doubao deep-thinking models have thinking disabled for speed (~1–5s). Default https://ark.cn-beijing.volces.com/api/v3</string>
+    <string name="settings_provider_hint_deepseek">Thinking auto-disabled (reasoning_effort=none) so extraction isn\'t slowed by long reasoning. Default https://api.deepseek.com</string>
+    <string name="settings_provider_hint_custom">Generic compatible channel: type the Base URL up to /v1 and the endpoint path is filled in automatically. Supports OpenAI /chat/completions and Anthropic /v1/messages (Claude relays); a full endpoint URL is also accepted.</string>
+    <string name="settings_vision_model">Vision model (used when sending photos, optional)</string>
+    <string name="settings_vision_model_hint">If the main model does not support images, fill in a vision-capable model name; leave empty to use the model above</string>
+    <string name="settings_reasoning_effort">Modeling reasoning effort (Kimi)</string>
+    <string name="settings_reasoning_effort_hint">Only applies when the Base URL is Kimi (moonshot/kimi). Kimi always thinks: low is fastest, high is balanced (default), max is strongest but slowest.</string>
+    <string name="settings_reasoning_low">low · fast</string>
+    <string name="settings_reasoning_high">high · balanced</string>
+    <string name="settings_reasoning_max">max · strongest</string>
+    <string name="settings_high_speed">High-speed modeling (Kimi highspeed)</string>
+    <string name="settings_high_speed_hint">When on, Kimi requests auto-switch to the highspeed model variant — same quality per official docs, ~2–3× faster, ~2× token usage. Turn off if model quality drops.</string>
+    <string name="settings_timeout">Request timeout (seconds)</string>
+    <string name="settings_mesh_default">Default mesh level</string>
+    <string name="settings_candidate_header">AI modeling candidates</string>
+    <string name="settings_candidate_count">Candidates on first modeling</string>
+    <string name="settings_candidate_count_fmt">%1$d</string>
+    <string name="settings_candidate_divergence">Candidate divergence control</string>
+    <string name="settings_candidate_divergence_hint">Filter candidates diverging too much from the baseline (frame: Δnodes ≤3, Δmembers ≤4; others: key-dimension deviation ≤20%)</string>
+    <string name="candidate_select_title">Choose a model</string>
+    <string name="candidate_select_subtitle">AI produced several reasonable simplifications of the same structure. Pick one to preview:</string>
+    <string name="candidate_select_pick">Use this option</string>
+    <string name="candidate_card_label">Option %1$d</string>
+    <string name="settings_about_header">About</string>
+    <string name="settings_version_fmt">Version %1$s</string>
+    <string name="settings_oss_entry">Open source licenses</string>
+    <string name="oss_title">Open Source Licenses</string>
+    <string name="oss_view_license">View full license</string>
+    <string name="oss_self">PocketSim own code</string>
+    <string name="oss_third">Third-party dependencies</string>
+    <string name="oss_copyleft_note">The following components are dynamically linked under LGPL, declared as required by law. This app is closed-source commercial, but does not modify or statically compile these components.</string>
+    <string name="oss_name_fmt">%1$s (v%2$s)</string>
+    <string name="oss_self_lic_fmt">%1$s — %2$s</string>
+    <string name="oss_open_core">Open-source core solver engine</string>
+    <string name="oss_closed">Commercial closed-source · All Rights Reserved</string>
+
+    <!-- Material library -->
+    <string name="material_title">Material Library</string>
+    <string name="material_subtitle">Built-in common materials · add manually or look up online</string>
+    <string name="material_add_custom">Add custom material</string>
+    <string name="material_search_web">Look up material online</string>
+    <string name="material_search_hint">Enter material name, e.g. 304 stainless steel, oak…</string>
+    <string name="material_search_btn">Search</string>
+    <string name="material_searching">Searching…</string>
+    <string name="material_name">Material name</string>
+    <string name="material_category">Category</string>
+    <string name="material_e">Elastic modulus E (MPa)</string>
+    <string name="material_nu">Poisson\'s ratio ν</string>
+    <string name="material_density">Density (kg/m³)</string>
+    <string name="material_strength">Strength (MPa)</string>
+    <string name="material_strength_type">Strength type (e.g. yield / tensile / compressive)</string>
+    <string name="material_e_fmt">Elastic modulus E (%1$s)</string>
+    <string name="material_density_fmt">Density (%1$s)</string>
+    <string name="material_strength_fmt">Strength (%1$s)</string>
+    <string name="material_strength_value_fmt">%1$s: %2$s</string>
+    <string name="material_notes">Notes</string>
+    <string name="material_save">Save to library</string>
+    <string name="material_saved">Saved</string>
+    <string name="material_delete">Delete</string>
+    <string name="material_delete_title">Delete material</string>
+    <string name="material_delete_confirm">Delete \"%1$s\" from the material library? Built-in materials cannot be deleted.</string>
+    <string name="material_deleted">Deleted: %1$s</string>
+    <string name="material_source_builtin">Built-in</string>
+    <string name="material_source_web">Web</string>
+    <string name="material_source_user">Custom</string>
+    <string name="material_search_fail">Search failed: %1$s</string>
+    <string name="material_name_required">Please enter material name</string>
+    <string name="material_e_required">Please enter elastic modulus</string>
+    <string name="material_nu_required">Please enter Poisson\'s ratio</string>
+    <string name="material_list_empty">No custom or web materials yet. Built-in materials are auto-matched during solving.</string>
+    <string name="home_material_entry">Material Library</string>
+
+    <!-- ============ Language / Units ============ -->
+    <string name="lang_system">Follow system</string>
+    <string name="lang_zh">中文</string>
+    <string name="lang_en">English</string>
+    <string name="unit_system_metric">Metric (mm · N · MPa)</string>
+    <string name="unit_system_imperial">Imperial (in · lb · psi)</string>
+    <string name="launcher_units_label">Units</string>
+    <string name="settings_units_header">Unit system</string>
+    <string name="settings_units_hint">Defaults to your system region. Previews and results follow the selected unit system; calculations stay metric internally.</string>
+    <string name="settings_language_header">Language</string>
+    <string name="settings_language_hint">Switch UI language (takes effect after page restart)</string>
+    <string name="launcher_language_label">Language</string>
+
+    <!-- ============ Launcher ============ -->
+    <string name="launcher_subtitle">Bringing physics simulation into everyday life</string>
+    <string name="launcher_mech_title">Mechanics</string>
+    <string name="launcher_mech_desc">Beams, frames &amp; 3D solids: forces, deflection, stress &amp; safety factor</string>
+    <string name="launcher_thermal_title">Thermal</string>
+    <string name="launcher_thermal_desc">Thermal expansion &amp; stress from temperature cycling, combined with mechanical loads</string>
+    <string name="launcher_fluid_title">Fluid</string>
+    <string name="launcher_fluid_desc">Wind pressure &amp; wall overturning, dam-foundation seepage, uplift &amp; sliding</string>
+    <string name="launcher_new_project">New project</string>
+    <string name="launcher_open_project">Open project history</string>
+    <string name="launcher_hide_projects">Hide project list</string>
+    <string name="launcher_activate">Enter invite code to activate AI</string>
+    <string name="launcher_activated_fmt">Activated · %1$d times/day</string>
+    <string name="launcher_no_projects">No saved projects yet. Save one from the result page after an analysis.</string>
+    <string name="launcher_unnamed">Untitled project</string>
+    <string name="launcher_project_stress_fmt">Stress %1$s · SF %2$s</string>
+    <string name="launcher_delete">Delete</string>
+
+    <!-- ============ Settings extras ============ -->
+    <string name="settings_activate">Enter invite code to activate</string>
+    <string name="settings_activated_fmt">Activated · %1$d times/day (view/change)</string>
+
+    <!-- ============ Common extras ============ -->
+    <string name="polish_failed_default">Polish failed, please try again later</string>
+    <string name="cancel">Cancel</string>
+    <string name="error_unknown_default">Unknown error</string>
+    <string name="unspecified">Unspecified</string>
+
+    <!-- ============ Material library extras ============ -->
+    <string name="material_lookup_desc">The built-in library only has common materials. Let AI look up rare materials (e.g. 304 stainless steel, oak) online; results are saved to the local library.</string>
+    <string name="material_manual_desc">For materials that cannot be looked up accurately online, enter FEA parameters manually.</string>
+    <string name="material_category_custom">Custom</string>
+    <string name="material_strength_unknown">Unknown</string>
+    <string name="material_all_fmt">All materials (%1$d)</string>
+
+    <!-- ============ Solid Preview ============ -->
+    <string name="solid_preview_title">3D Solid Preview</string>
+    <string name="solid_regen_title">Modify model</string>
+    <string name="solid_regen_hint">Tell AI what\'s wrong to rebuild, e.g. "wall height should be 3 m", "this is Beaufort 10, not 8", "wall thickness 240 mm".</string>
+    <string name="solid_regen_placeholder">e.g. wall thickness was wrong, should be 370 mm…</string>
+    <string name="solid_regen_btn">Rebuild with AI</string>
+    <string name="solid_modify_btn">Not satisfied, modify model</string>
+    <string name="solid_running">Solving 3D solid…</string>
+    <string name="solid_default_name">3D solid wall</string>
+    <string name="solid_preview_desc">Simplify the problem as \"a solid wall fixed at the base\": use tetrahedral FEA to compute displacement &amp; stress distribution inside the wall, showing root cracking, compression failure and stress concentration. Confirm to start meshing &amp; solving.</string>
+    <string name="solid_schematic_note">Schematic (to scale): gray = wall, fixed base (hatching), arrows = wind pressure direction.</string>
+    <string name="solid_info_title">Model info</string>
+    <string name="solid_dim_fmt">Wall: length %1$s × height %2$s × thickness %3$s</string>
+    <string name="solid_material_fmt">Material: %1$s</string>
+    <string name="solid_load_fmt">Wind load: %1$s</string>
+    <string name="solid_mesh_hint">Mesh level (affects accuracy &amp; time)</string>
+    <string name="solid_compute_content">Compute: 4-node tetrahedral FEA (displacement/stress field) + root bending, compression &amp; overturning checks</string>
+    <string name="solid_fine_warn">Fine mesh (fine/ultra): many tetrahedral elements, solving may take 10+ seconds and more memory. For quick estimates or lower-end phones, use medium or coarse mesh during AI modeling.</string>
+    <string name="solid_normal_warn">3D solid (TET4) uses tetrahedral FEA, much heavier than beam elements. Large walls or fine mesh may take seconds to 10+ seconds; if laggy, use a coarser mesh.</string>
+    <string name="solid_mat_e_fmt">E %1$s</string>
+    <string name="solid_mat_nu_fmt">ν %1$s</string>
+    <string name="solid_mat_density_fmt">ρ %1$s</string>
+    <string name="solid_wind_cp_fmt">, net pressure coeff %1$s</string>
+    <string name="solid_wind_pressure_fmt">Wind pressure %1$s%2$s</string>
+    <string name="solid_wind_beaufort_fmt">Beaufort %1$d (~%2$s)%3$s</string>
+    <string name="solid_wind_speed_fmt">Wind speed %1$s%2$s</string>
+    <string name="solid_dim_length_fmt">L %1$s</string>
+    <string name="solid_dim_height_fmt">H %1$s</string>
+    <string name="solid_dim_thickness_fmt">T %1$s</string>
+    <string name="solid_wind_arrow">Wind →</string>
+
+    <!-- ============ Flow Preview ============ -->
+    <string name="flow_preview_title">Flow Model Preview</string>
+    <string name="flow_running">Solving flow field…</string>
+    <string name="flow_default_name">Wind-load wall</string>
+    <string name="flow_preview_desc">Simplify as \"wind blowing perpendicular to a free-standing wall\": below is the wall cross-section &amp; flow direction. Confirm to start flow solving &amp; wind-stability checks.</string>
+    <string name="flow_schematic_note">Schematic (to scale): gray = wall elevation, left arrows = flow direction.</string>
+    <string name="flow_info_title">Model info</string>
+    <string name="flow_dim_fmt">Wall: height %1$s × thickness %2$s × length %3$s</string>
+    <string name="flow_material_fmt">Material: %1$s</string>
+    <string name="flow_wind_speed_fmt">Wind speed %1$s</string>
+    <string name="flow_wind_beaufort_fmt">Beaufort %1$d (~%2$s)</string>
+    <string name="flow_wind_unspecified">Wind speed unspecified</string>
+    <string name="flow_inflow_fmt">Inflow: %1$s</string>
+    <string name="flow_compute_content">Compute: 2D potential flow FEA (velocity/pressure/streamlines) + overturning/sliding/root-bending checks</string>
+    <string name="flow_wall_height_fmt">Wall height %1$s</string>
+    <string name="flow_thickness_fmt">Thickness %1$s</string>
+    <string name="flow_wind_arrow">Wind →</string>
+
+    <!-- ============ Solid Result ============ -->
+    <string name="solid_result_default_name">3D Solid Result</string>
+    <string name="solid_verdict_danger">Danger: wall may crack or overturn</string>
+    <string name="solid_verdict_caution">Caution: near capacity limit</string>
+    <string name="solid_safety_fmt">Overall safety factor %1$s</string>
+    <string name="solid_weak_part_fmt">Weakest part: %1$s</string>
+    <string name="solid_critical_speed_fmt">Critical wind speed: above ~%1$s%2$s, %3$sgoverns and safety factor drops below 1.0.</string>
+    <string name="solid_critical_beaufort_fmt">(~Beaufort %1$d)</string>
+    <string name="solid_critical_mode_default">capacity</string>
+    <string name="solid_top_disp_title">Top displacement</string>
+    <string name="solid_bending_stress_title">Root bending stress</string>
+    <string name="solid_safety_title">Safety factor</string>
+    <string name="solid_max_disp_fmt">Max displacement %1$s</string>
+    <string name="solid_max_compression_fmt">Max compression %1$s</string>
+    <string name="solid_vonmises_title">Stress contour (von Mises)</string>
+    <string name="solid_stress_low_fmt">0 %1$s (low)</string>
+    <string name="solid_stress_high_fmt">%1$s (high)</string>
+    <string name="solid_3d_hint">One-finger drag to rotate · two-finger pinch to zoom; contour colored by node-averaged stress, surface lines are element boundaries.</string>
+    <string name="solid_top_disp_fmt">Top displacement %1$s, </string>
+    <string name="solid_result_summary_fmt">Top displacement %1$s, root bending stress %2$s, max compression %3$s.</string>
+    <string name="solid_checks_title">Engineering Checks</string>
+    <string name="solid_check_safety_fmt">%1$s: safety factor %2$s</string>
+    <string name="solid_check_load_resist_fmt">Action %1$s %2$s / Resistance %3$s %4$s</string>
+    <string name="solid_wind_load_summary_fmt">Wind pressure %1$s (net shape factor %2$s), total wind load %3$s; wall self-weight %4$s.</string>
+    <string name="solid_theory_compare_title_fmt">Comparison with theory (%1$s)</string>
+    <string name="solid_theory_disp_fmt">Top displacement: FEM %1$s / theory %2$s (error %3$s%%)</string>
+    <string name="solid_theory_bend_fmt">Root bending: FEM %1$s / theory %2$s (error %3$s%%)</string>
+    <string name="solid_theory_converged">FEM matches beam theory closely, indicating deformation/stress have converged after mesh refinement.</string>
+    <string name="solid_advice_title">Strengthening Advice</string>
+    <string name="solid_narrative_title">Analysis Process</string>
+    <string name="solid_assumptions_title">Calculation Assumptions</string>
+
+    <!-- ============ Activation ============ -->
+    <string name="activation_title">Invite Code Activation</string>
+    <string name="activation_desc">Enter the invite code from the developer to enable cloud AI modeling. One invite code is for one device; daily quota is determined by the invite code.</string>
+    <string name="activation_activated">Activated</string>
+    <string name="activation_daily_fmt">%1$d AI calls available per day</string>
+    <string name="activation_manual_key">Using manually configured API Key</string>
+    <string name="activation_device_id_fmt">Device ID: %1$s</string>
+    <string name="activation_not_generated">Not generated</string>
+    <string name="activation_credential_fmt">Credential: %1$s</string>
+    <string name="activation_cleared">Credential cleared, re-enter invite code</string>
+    <string name="activation_clear_btn">Clear credential / re-activate</string>
+    <string name="activation_server_addr">Server address</string>
+    <string name="activation_invite_code">Invite code</string>
+    <string name="activation_generating">Generating…</string>
+    <string name="activation_local_device_id_fmt">Local device ID: %1$s</string>
+    <string name="activation_success_fmt">Activated, %1$d calls available today</string>
+    <string name="activation_restore_btn">Restore previous invite-code activation</string>
+    <string name="activation_restored">Previous invite-code credential restored (no network activation needed)</string>
+    <string name="activation_device_taken_fmt">This device was already activated and the server does not allow re-activation. Ask the admin to delete device %1$s, or reuse the previously saved app_token.</string>
+    <string name="activation_failed_default">Activation failed, please try again later</string>
+    <string name="activation_reactivate">Re-activate</string>
+    <string name="activation_activate">Activate</string>
+    <string name="activation_admin_note">Invite codes are generated by the admin on the server at /admin/invites</string>
+
+    <!-- ============ Frame preview extras ============ -->
+    <string name="frame_regen_hint">What about this simplified model seems wrong to you? Write it down so AI can rebuild. e.g. \"The human body should be a distributed load, not a point load\", \"3030 aluminum extrusion should be treated as a hollow section\".</string>
+    <string name="frame_regen_placeholder">e.g. load position is wrong, the human body should be a distributed load…</string>
+    <string name="frame_holes_prefix">, holes </string>
+    <string name="frame_hole_rect">rect</string>
+    <string name="frame_hole_circle">round</string>
+    <string name="frame_hole_fmt">%1$s φ%2$s@%3$s</string>
+    <string name="frame_section_pipe"> (tube)</string>
+    <string name="frame_section_solid_round"> (solid round)</string>
+    <string name="frame_section_hollow"> (hollow)</string>
+    <string name="frame_member_fmt">Member %1$d: %2$s %3$s</string>
+    <string name="frame_member_strong_axis">(h vertical strong axis)</string>
+    <string name="frame_member_nodes_fmt">(nodes %1$d → %2$d)</string>
+    <string name="frame_support_node_fmt">node %1$d (%2$s)</string>
+
+    <!-- ============ Frame result extras ============ -->
+    <string name="frame_model_default_name">Frame model</string>
+    <string name="frame_saved_message">Saved to my projects</string>
+    <string name="frame_save_failed_fmt">Save failed: %1$s</string>
+    <string name="frame_pdf_saved_fmt">PDF saved to Downloads: %1$s</string>
+    <string name="frame_pdf_generated_fmt">PDF generated: %1$s</string>
+    <string name="frame_export_failed_fmt">Export failed: %1$s</string>
+    <string name="frame_saving">Saving…</string>
+    <string name="frame_save_to_projects">Save to my projects</string>
+    <string name="frame_exporting">Exporting…</string>
+    <string name="frame_member_default">member</string>
+    <string name="frame_thermal_member_fmt">m%1$s %2$s°C</string>
+    <string name="frame_member_title_fmt">Member %1$d · %2$s %3$s</string>
+    <string name="frame_detail_stress_fmt">Stress %1$s</string>
+    <string name="frame_detail_vm_stress_fmt">Von Mises stress %1$s</string>
+    <string name="frame_detail_util_fmt"> · utilization %1$s%%</string>
+    <string name="frame_detail_axial_fmt"> · axial %1$s (%2$s)</string>
+    <string name="frame_detail_my_fmt"> · My %1$s</string>
+    <string name="frame_detail_mz_fmt"> · Mz %1$s</string>
+    <string name="frame_detail_torsion_fmt"> · torsion %1$s</string>
+    <string name="frame_detail_max_moment_fmt"> · max moment %1$s</string>
+    <string name="frame_detail_compression_fmt"> · compression %1$s</string>
+    <string name="frame_detail_delta_t_fmt"> · ΔT %1$s°C</string>
+    <string name="frame_analysis_default_name">Frame analysis</string>
+
+    <!-- ============ Seepage preview ============ -->
+    <string name="seepage_preview_title">Seepage Model Preview</string>
+    <string name="seepage_running">Solving seepage…</string>
+    <string name="seepage_preview_desc">Simplify as \"a concrete gravity dam + permeable foundation\": below is the dam cross-section &amp; upstream/downstream water levels. Confirm to start foundation seepage solving &amp; stability checks.</string>
+    <string name="seepage_default_name">Dam seepage</string>
+    <string name="seepage_schematic_note">Schematic (to scale): gray = dam body, blue = upstream/downstream water, below = permeable foundation.</string>
+    <string name="seepage_info_title">Model info</string>
+    <string name="seepage_dim_fmt">Dam: height %1$s × crest width %2$s, base width ~%3$s</string>
+    <string name="seepage_slope_fmt">Slopes: upstream %1$s, downstream %2$s</string>
+    <string name="seepage_water_level_fmt">Water levels: upstream %1$s, downstream %2$s (from foundation base)</string>
+    <string name="seepage_permeability_fmt">, foundation permeability %1$s</string>
+    <string name="seepage_compute_content">Compute: 2D steady seepage FEA (head field / streamlines) + sliding / overturning / piping checks</string>
+    <string name="seepage_slope_vertical">vertical (1:0)</string>
+    <string name="seepage_slope_ratio_fmt">1:%1$s</string>
+    <string name="seepage_dam_height_fmt">Dam height %1$s</string>
+    <string name="seepage_upstream_fmt">Upstream %1$s</string>
+    <string name="seepage_downstream_fmt">Downstream %1$s</string>
+    <string name="seepage_permeable_foundation">Permeable foundation</string>
+
+    <!-- ============ Seepage result ============ -->
+    <string name="seepage_result_title">Dam Seepage Result</string>
+    <string name="seepage_verdict_danger">Danger: foundation seepage may fail</string>
+    <string name="seepage_verdict_caution">Caution: seepage near failure</string>
+    <string name="seepage_safety_summary_fmt">Overall seepage safety factor %1$s (sliding %2$s / overturning %3$s / piping %4$s)</string>
+    <string name="seepage_weak_part_fmt">Weakest part: %1$s</string>
+    <string name="seepage_critical_level_fmt">Critical upstream level: above %1$s, %2$sgoverns failure.</string>
+    <string name="seepage_metric_seepage">Seepage per width</string>
+    <string name="seepage_permeability_footer_fmt">Permeability %1$s</string>
+    <string name="seepage_metric_uplift">Uplift pressure</string>
+    <string name="seepage_uplift_ratio_fmt">%1$s%% of self-weight</string>
+    <string name="seepage_metric_safety">Seepage safety factor</string>
+    <string name="seepage_field_title">Seepage field: head contour &amp; streamlines</string>
+    <string name="seepage_head_min_fmt">%1$s (downstream low head)</string>
+    <string name="seepage_head_max_fmt">%1$s (upstream high head)</string>
+    <string name="seepage_uplift_exit_fmt">Uplift %1$s, exit gradient %2$s (allow %3$s).</string>
+    <string name="seepage_field_explain">Head decreases from upstream to downstream; contour shows residual head at each foundation point. Dark curves are streamlines — denser streamlines and concentration at the exit mean higher piping risk.</string>
+    <string name="seepage_checks_title">Stability checks</string>
+    <string name="seepage_check_item_fmt">%1$s: safety factor %2$s</string>
+    <string name="seepage_check_force_resist_fmt">Action %1$s %2$s ／ Resistance %3$s %2$s</string>
+    <string name="seepage_dam_weight_fmt">Dam self-weight %1$s, height %2$s, base width %3$s.</string>
+    <string name="seepage_advice_title">Strengthening advice</string>
+    <string name="seepage_bullet_fmt">· %1$s</string>
+    <string name="seepage_assumptions_title">Assumptions</string>
+    <string name="seepage_mesh_info_fmt">Material %1$s (density %2$s) · solved in %3$s ms</string>
+
+    <!-- ============ Transient preview ============ -->
+    <string name="transient_all_members">all members</string>
+    <string name="transient_members_prefix">members </string>
+    <string name="transient_preview_title">Transient Preview</string>
+    <string name="transient_running">Solving step by step…</string>
+    <string name="transient_preview_desc">Simplify as a plane frame with \"constant load + temperature cycling over time\": solve once per time step at the current temperature, find the worst moment. Confirm to run.</string>
+    <string name="transient_default_name">Thermal transient analysis</string>
+    <string name="transient_profile_note_fmt">X-axis is time (total %1$s, %2$d steps): temperature rises from %3$s°C to %4$s°C then back to %5$s°C.</string>
+    <string name="transient_frame_default_name">Frame structure</string>
+    <string name="transient_schematic_note">Schematic (to scale): gray dots = nodes, orange = members subject to temperature change, bottom blocks = supports.</string>
+    <string name="transient_info_title">Model info</string>
+    <string name="transient_structure_fmt">Structure: %1$d nodes, %2$d members, %3$d supports</string>
+    <string name="transient_dead_load_fmt">Dead load: %1$s</string>
+    <string name="transient_temp_profile_fmt">Thermal profile: %1$s, %2$s, %3$d time steps</string>
+    <string name="transient_thermal_members_fmt">Members subject to temperature change: %1$s</string>
+    <string name="transient_compute_content">Compute: substitute temperature load per step (quasi-static thermo-mechanical), output stress / deflection / safety factor over time</string>
+    <string name="transient_load_udl_fmt">Member %1$s UDL %2$s%3$s</string>
+    <string name="transient_load_force_fmt">Node %1$s point load %2$s</string>
+    <string name="transient_dir_up">(upward)</string>
+    <string name="transient_dir_down">(downward)</string>
+    <string name="transient_duration_hours_fmt">%.1f h</string>
+    <string name="transient_duration_minutes_fmt">%.0f min</string>
+    <string name="transient_duration_seconds_fmt">%.0f s</string>
+    <string name="transient_profile_sine">Sine (smooth heat-up &amp; cool-down)</string>
+    <string name="transient_profile_triangle">Triangle (linear heat-up &amp; cool-down)</string>
+    <string name="transient_peak_label_fmt">%1$s°C (peak)</string>
+    <string name="transient_time_label">time</string>
+
+    <!-- ============ Transient result ============ -->
+    <string name="transient_result_title">Transient Result</string>
+    <string name="transient_verdict_danger">Unsafe during thermal cycling</string>
+    <string name="transient_verdict_caution">Be cautious during thermal cycling</string>
+    <string name="transient_worst_fmt">Worst moment: %1$s, temperature %2$s°C, stress %3$s, safety factor %4$s.</string>
+    <string name="transient_advice">Advice: enlarge the weakest member section, reduce temperature difference, allow ends to expand freely (release thermal constraint), or use a more heat-resistant material.</string>
+    <string name="transient_metric_worst_stress">Worst stress</string>
+    <string name="transient_metric_footer_fmt">%1$s · %2$s°C</string>
+    <string name="transient_metric_min_safety">Min safety factor</string>
+    <string name="transient_over_temp_title">Temperature exceeds long-term heat resistance</string>
+    <string name="transient_over_temp_peak_fmt">Peak %1$s°C</string>
+    <string name="transient_over_temp_limit_fmt">, long-term heat resistance of %1$s ~%2$s°C</string>
+    <string name="transient_over_temp_warn">. Material strength &amp; stiffness drop significantly at high temperature; this result is not reduced. Please use heat-resistant material or lower the peak temperature.</string>
+    <string name="transient_thermal_members_default">participating members</string>
+    <string name="transient_curves_title">Over time</string>
+    <string name="transient_legend_temp">Temp °C</string>
+    <string name="transient_legend_stress">Max stress</string>
+    <string name="transient_legend_disp">Max deflection %1$s</string>
+    <string name="transient_current_moment_fmt">Current: %1$s · temp %2$s°C · ΔT %3$s°C · thermal elongation %4$s</string>
+    <string name="transient_slider_hint_fmt">Drag to select a moment (%1$d total, %2$s)</string>
+    <string name="transient_static_note">This is a statically determinate structure: uniform temperature change only causes free expansion, no thermal stress, so stress &amp; safety factor are nearly constant across steps (thermal elongation varies with temperature).</string>
+    <string name="transient_metric_selected_stress">Stress at this moment</string>
+    <string name="transient_metric_selected_disp">Deflection at this moment</string>
+    <string name="transient_metric_selected_safety">Safety at this moment</string>
+    <string name="transient_deform_title_fmt">Deformation at %1$s (scaled %2$d×)</string>
+    <string name="transient_deform_note">Gray dashed = original shape, colored solid = deformed shape (colored by member stress)</string>
+    <string name="transient_members_title_fmt">Member forces at %1$s</string>
+    <string name="transient_member_delta_t_fmt">ΔT %1$s°C</string>
+    <string name="transient_member_stress_fmt"> · stress %1$s</string>
+    <string name="transient_member_util_fmt"> · utilization %1$s%%</string>
+    <string name="transient_member_axial_fmt"> · axial %1$s</string>
+    <string name="transient_member_moment_fmt"> · moment %1$s</string>
+    <string name="transient_info_fmt">%1$d moments × %2$d members, thermal profile %3$s</string>
+
+    <!-- ============ Solid generic preview ============ -->
+    <string name="solid_generic_regen_hint">Tell AI what\'s wrong to rebuild, e.g. \"the steel pipe should be horizontal and simply supported at both ends\", \"there\'s a 10 mm through-hole in the middle, check by net section\", \"the load should be vertical downward\".</string>
+    <string name="solid_generic_regen_placeholder">e.g. model orientation is wrong, the pipe is horizontal…</string>
+    <string name="solid_generic_preview_desc">Simplify as \"a constrained 3D solid\": use tetrahedral FEA to compute internal displacement &amp; stress distribution, showing stress concentration, compression failure and deformation. Confirm to start meshing &amp; solving.</string>
+    <string name="solid_generic_default_name">3D solid</string>
+    <string name="solid_generic_schematic_note">Schematic (to scale): gray = solid, hatched = constrained faces, arrows = load direction.</string>
+    <string name="solid_generic_geometry_fmt">Geometry: %1$s</string>
+    <string name="solid_generic_material_fmt">Material: %1$s%2$s</string>
+    <string name="solid_generic_supports_fmt">Constraints (%1$d): %2$s</string>
+    <string name="solid_generic_loads_fmt">Loads (%1$d): %2$s</string>
+    <string name="solid_generic_compute_content">Compute: 4-node tetrahedral FEA (displacement/stress field) + tension/compression strength checks</string>
+    <string name="solid_generic_note">Note: solid mesh is generated from solid primitives, without holes, chamfers or other details. For holes in members/extrusions (stress around holes), rebuild using the \"space structure\" beam mode.</string>
+    <string name="solid_generic_mat_e_prefix">E </string>
+    <string name="solid_generic_mat_nu_prefix">ν </string>
+    <string name="solid_generic_mat_density_prefix">ρ </string>
+    <string name="solid_generic_paren_open">(</string>
+    <string name="solid_generic_comma">, </string>
+    <string name="solid_generic_paren_close">)</string>
+    <string name="solid_generic_geom_cylinder_fmt">Cylinder radius %1$s × height %2$s</string>
+    <string name="solid_generic_geom_plate_fmt">Plate length %1$s × width %2$s × thickness %3$s</string>
+    <string name="solid_generic_geom_box_fmt">Box length %1$s × height %2$s × thickness %3$s</string>
+    <string name="solid_generic_none">none</string>
+    <string name="solid_generic_support_all_fixed">fully fixed</string>
+    <string name="solid_generic_support_plane_fmt">%1$s=%2$s face (%3$s)</string>
+    <string name="solid_generic_support_point_fmt">point(%1$s) (%2$s)</string>
+    <string name="solid_generic_support_outline_fmt">%1$s=%2$s face outline/edges (%3$s)</string>
+    <string name="solid_generic_face_min">min</string>
+    <string name="solid_generic_face_max">max</string>
+    <string name="solid_generic_separator">; </string>
+    <string name="solid_generic_load_hydro_fmt">Hydrostatic/soil pressure %1$s=%2$s, bottom %3$s → top 0</string>
+    <string name="solid_generic_load_pressure_fmt">Face pressure %1$s=%2$s, %3$s</string>
+    <string name="solid_generic_load_gravity_dir_fmt">Gravity direction[%1$s]</string>
+    <string name="solid_generic_load_gravity_default_fmt">Gravity (default along -%1$s)</string>
+    <string name="solid_generic_load_force_fmt">Point force [%1$s] %2$s</string>
+    <string name="solid_generic_load_wind_fmt">Wind speed %1$s m/s → wind pressure converted by code</string>
+    <string name="solid_generic_load_beaufort_fmt">Beaufort force %1$s → wind pressure converted by code</string>
+    <string name="solid_generic_load_massarea_fmt">Mass %1$s kg / area %2$s m² → pressure converted by code</string>
+    <string name="solid_generic_fluid_water">water</string>
+    <string name="solid_generic_fluid_soil">soil</string>
+    <string name="solid_generic_load_depth_fmt">%1$s depth %2$s m → hydrostatic pressure via ρgh</string>
+    <string name="solid_generic_load_dir_out">(outward/suction)</string>
+    <string name="solid_generic_load_dir_in">(inward/pressure)</string>
+    <string name="solid_generic_load_massforce_fmt">Mass %1$s kg → force converted by code, direction [%2$s]</string>
+    <string name="solid_generic_dim_diameter_fmt">Diameter %1$s</string>
+    <string name="solid_generic_dim_width_fmt">Width %1$s</string>
+    <string name="solid_generic_mesh_warn_heavy">Fine mesh (fine/ultra): many tetrahedral elements, solving may take 10+ seconds and use significant memory. For quick estimates or lower-end phones, use medium or coarse mesh.</string>
+    <string name="solid_generic_mesh_warn_normal">3D solid (TET4) uses tetrahedral FEA, significantly heavier than beam elements. Large solids or fine mesh may take seconds to 10+ seconds; if lagging, use a coarser mesh level.</string>
+
+    <!-- ============ Solid generic result ============ -->
+    <string name="solid_generic_result_title">3D Solid Result</string>
+    <string name="solid_generic_modify_btn">Modify model</string>
+    <string name="solid_generic_verdict_danger">Danger: near or beyond material strength limit</string>
+    <string name="solid_generic_verdict_caution">Caution: near capacity limit</string>
+    <string name="solid_generic_safety_fmt">Overall safety factor %1$s (tension %2$s / compression %3$s)</string>
+    <string name="solid_generic_stress_disp_fmt">Max von Mises stress %1$s, max displacement %2$s.</string>
+    <string name="solid_generic_metric_disp">Max displacement</string>
+    <string name="solid_generic_disp_node_fmt">Node %1$s</string>
+    <string name="solid_generic_stress_footer_fmt">T %1$s / C %2$s</string>
+    <string name="solid_generic_checks_title">Engineering checks</string>
+    <string name="solid_generic_reactions_title">Support reactions</string>
+    <string name="solid_generic_reactions_fmt">Fx = %1$s, Fy = %2$s, Fz = %3$s</string>
+    <string name="solid_generic_weight_fmt">Solid self-weight %1$s (volume %2$s).</string>
+    <string name="solid_generic_mesh_info_fmt">Material %1$s (E %2$s, ν %3$s) · mesh %4$d tets / %5$d nodes · DOF %6$d · solved in %7$s ms (%8$s)</string>
+
+    <!-- ============ Flow result ============ -->
+    <string name="flow_result_title">Wind-load Result</string>
+    <string name="flow_verdict_danger">Danger: this wall may be blown over</string>
+    <string name="flow_verdict_caution">Caution: wall near instability under strong wind</string>
+    <string name="flow_safety_summary_fmt">Overall wind safety factor %1$s (overturning %2$s / sliding %3$s / root bending %4$s)</string>
+    <string name="flow_critical_speed_fmt">Critical wind: above ~%1$s (~Beaufort %2$s), %3$ssafety factor drops below 1.0.</string>
+    <string name="flow_metric_wind_speed">Inflow wind speed</string>
+    <string name="flow_wind_footer_fmt">%1$s · %2$s</string>
+    <string name="flow_metric_total_force">Total wind load</string>
+    <string name="flow_force_per_m_fmt">%1$s per meter</string>
+    <string name="flow_metric_safety">Wind safety factor</string>
+    <string name="flow_field_title">Flow field: pressure contour &amp; streamlines</string>
+    <string name="flow_pressure_min_fmt">%1$s (suction)</string>
+    <string name="flow_pressure_max_fmt">%1$s (windward pressure)</string>
+    <string name="flow_stagnation_fmt">Windward stagnation pressure %1$s (theoretical ½ρU² = %2$s); flow over wall top accelerates to %3$s× inflow.</string>
+    <string name="flow_potential_note_fmt">Inviscid potential flow cannot model leeward vortices; contour is clamped to ±dynamic pressure. Structural wind load is taken by code pressure coefficient %1$s.</string>
+    <string name="flow_wall_weight_fmt">Wall self-weight %1$s, height %2$s, thickness %3$s, length %4$s.</string>
+    <string name="flow_mesh_info_fmt">Material %1$s (density %2$s) · solved in %3$s ms</string>
+    <string name="common_enum_sep">, </string>
+
+    <!-- ============ thin-wall vessel (tank/silo, shell_vessel) ============ -->
+    <string name="home_mode_shell">Thin-wall vessel</string>
+    <string name="home_mode_shell_hint">Water tanks, troughs, silos, hoppers and storage vessels filled with liquid or bulk material; shell elements compute wall stress and deformation under fill pressure and self-weight; loads are generated automatically from the fill</string>
+    <string name="home_mode_buried_pipe">Buried pipe</string>
+    <string name="home_mode_buried_pipe_hint">Pipes buried in soil (drainage, water supply, conduit, corrugated) — deformation and safety under soil cover pressure and surface wheel loads, estimated with engineering formulas (no FEM)</string>
+    <string name="home_example_cat_shell">Thin-wall structures</string>
+    <string-array name="home_examples_shell">
+        <item>A rectangular steel water tank 6 ft long, 3 ft wide, 5 ft tall, wall 1/4 in thick, filled to 4 ft with water — will the walls bulge?</item>
+        <item>A glass cup 4 in in diameter and 8 in tall, wall 1/8 in thick, filled with boiling water (212°F) and placed straight into a 32°F fridge — will the wall crack from thermal stress?</item>
+    </string-array>
+    <string-array name="home_examples_shell_imperial">
+        <item>A rectangular steel water tank 6 ft long, 3 ft wide, 5 ft tall, wall 1/4 in thick, filled to 4 ft with water — will the walls bulge?</item>
+        <item>A glass cup 4 in in diameter and 8 in tall, wall 1/8 in thick, filled with boiling water (212°F) and placed straight into a 32°F fridge — will the wall crack from thermal stress?</item>
+    </string-array>
+    <string name="home_example_cat_buried">Buried pipe</string>
+    <string-array name="home_examples_buried">
+        <item>A PVC plastic pipe 50 mm in diameter and 3 mm thick, buried 2 m deep in soil, with vehicles passing overhead — will it be damaged?</item>
+    </string-array>
+    <string-array name="home_examples_buried_imperial">
+        <item>A PVC plastic pipe 50 mm in diameter and 3 mm thick, buried 2 m deep in soil, with vehicles passing overhead — will it be damaged?</item>
+    </string-array>
+    <string name="shell_preview_title">Vessel preview</string>
+    <string name="shell_preview_desc">Simplify the problem into a constant-thickness, flat-bottom thin-wall vessel: four-node shell elements (MITC4) compute wall displacement and stress under fill pressure and self-weight, showing wall bulging and bottom-corner stress concentration. Loads (hydrostatic / granular lateral / self-weight) are generated automatically from the fill. Confirm to solve.</string>
+    <string name="shell_default_name">Thin-wall vessel</string>
+    <string name="shell_result_title">Vessel result</string>
+
+    <!-- ============ Buried pipe (shell_buried_pipe, engineering formulas) ============ -->
+    <string name="buried_pipe_result_title">Buried pipe check result</string>
+    <string name="buried_pipe_default_name">Buried pipe check</string>
+    <string name="buried_pipe_back">Back</string>
+    <string name="buried_pipe_modify">Edit model</string>
+    <string name="buried_pipe_save">Save project</string>
+    <string name="buried_pipe_solve_failed">Solve failed</string>
+    <string name="buried_pipe_verdict_fmt">Verdict: %1$s</string>
+    <string name="buried_pipe_verdict_safe">Safe</string>
+    <string name="buried_pipe_verdict_caution">Needs attention</string>
+    <string name="buried_pipe_verdict_unsafe">Unsafe</string>
+    <string name="buried_pipe_basis_note">Engineering-formula estimate · linear elastic · conservative; not a formal design</string>
+    <string name="buried_pipe_ring_title">Deformed elliptical ring (dashed = original circle; deflection amplified)</string>
+    <string name="buried_pipe_amp_fmt">Amplification ×%1$s</string>
+    <string name="buried_pipe_dim_fmt">Diameter %1$s mm · cover depth %2$s m</string>
+    <string name="buried_pipe_metric_dy">Vertical deflection Δy</string>
+    <string name="buried_pipe_metric_dratio">Deflection ratio Δ/D</string>
+    <string name="buried_pipe_metric_stress">Max ring stress</string>
+    <string name="buried_pipe_metric_sratio">Stress ratio σ/[σ]</string>
+    <string name="buried_pipe_metric_pcr">Buckling critical pressure p_cr</string>
+    <string name="buried_pipe_metric_bsf">Buckling safety factor</string>
+    <string name="buried_pipe_metric_psoil">Vertical soil pressure</string>
+    <string name="buried_pipe_metric_plive">Wheel-load pressure at crown</string>
+    <string name="buried_pipe_metric_plat">Lateral soil pressure</string>
+    <string name="buried_pipe_metric_pint">Internal pressure</string>
+    <string name="buried_pipe_checks_title">Checks</string>
+    <string name="buried_pipe_params_title">Calculation parameters</string>
+    <string name="buried_pipe_param_material">Material</string>
+    <string name="buried_pipe_param_material_fmt">%1$s (E=%2$s MPa, ν=%3$s, strength=%4$s MPa)</string>
+    <string name="buried_pipe_param_dim">Diameter / wall thickness</string>
+    <string name="buried_pipe_param_cover">Cover depth / internal pressure</string>
+    <string name="buried_pipe_param_soil">Unit weight / friction angle / cohesion</string>
+    <string name="buried_pipe_param_wheel">Wheel load / tire contact</string>
+    <string name="buried_pipe_formulas_title">Formulas &amp; assumptions</string>
+    <string name="buried_pipe_formulas_used">Formulas used:</string>
+    <string name="buried_pipe_assumptions_title">Defaults &amp; assumptions (defaults apply to inputs not provided):</string>
+    <string name="buried_pipe_advice_title">Advice</string>
+    <string name="buried_pipe_disclaimer">This is an engineering-formula estimate that ignores beneficial soil-spring and cover restraint, so it is conservative; formal design should follow codes and site investigation.</string>
+    <string name="shell_geom_rect_fmt">Rectangular tank L %1$s × W %2$s × H %3$s</string>
+    <string name="shell_geom_circle_fmt">Cylindrical silo Ø %1$s × H %2$s</string>
+    <string name="shell_thickness_fmt">, wall thickness %1$s m</string>
+    <string name="shell_fill_fmt">Fill: %1$s</string>
+    <string name="shell_fill_default">Water (default)</string>
+    <string name="shell_fill_custom">Custom fill</string>
+    <string name="shell_fill_depth_fmt">fill depth %1$s m</string>
+    <string name="shell_compute_content">Compute: 4-node shell (MITC4) displacement/stress field + tension/compression strength checks; loads generated from the fill (hydrostatic / granular lateral / floor reaction / self-weight)</string>
+    <string name="shell_preview_note">Note: shell elements apply to constant-thickness, flat-bottom, vertical vessels; the floor is rigidly connected to the wall (stress concentration shows at the corner). No roof, openings, stiffeners or hopper details.</string>
+    <string name="shell_mesh_hint">Thin-wall vessels (MITC4 shells) are more expensive than beam elements. Large vessels or fine meshes may take seconds to ~tens of seconds; use a coarser level if the phone lags.</string>
+    <string name="shell_mesh_warn_heavy">Fine/ultra mesh: many shell elements, solving may take ~tens of seconds or more and use a lot of memory. For a quick estimate on an average phone, use medium or coarse.</string>
+    <string name="shell_running">Solving thin-wall vessel…</string>
+    <string name="shell_regen_hint">Tell the AI what\'s wrong to rebuild, e.g. \"the tank wall should be 8 mm thick\", \"the silo holds wet sand not dry sand\", \"the water is only 1 m deep, not full\".</string>
+    <string name="shell_weight_fmt">Vessel self-weight %1$s (volume %2$s).</string>
+    <string name="shell_mesh_info_fmt">Material %1$s (E %2$s, ν %3$s) · mesh %4$d shell elements / %5$d nodes · DOF %6$d · solved in %7$s ms (%8$s)</string>
+
+    <!-- ============ AI structural optimization (Frame / SolidGeneric, phase 1) ============ -->
+    <string name="settings_optimize_header">AI structural optimization</string>
+    <string name="settings_optimize_count">Number of options</string>
+    <string name="settings_optimize_count_hint">The optimize entry appears only when the verdict is caution or danger; more options mean longer AI and re-solve time.</string>
+    <string name="settings_optimize_count_fmt">%1$d</string>
+    <string name="optimize_button">AI optimization</string>
+    <string name="optimize_title">AI optimization</string>
+    <string name="optimize_back">Back</string>
+    <string name="optimize_analyzing">Diagnosing the problem and generating options…</string>
+    <string name="optimize_verifying">Running finite-element verification…</string>
+    <string name="optimize_diagnosis_header">Diagnosis</string>
+    <string name="optimize_scheme_header">Optimization option</string>
+    <string name="optimize_expected">Expected effect</string>
+    <string name="optimize_changes">Changes</string>
+    <string name="optimize_figure_title">Optimized structure (stylized schematic)</string>
+    <string name="optimize_figure_hint">Drag with one finger to rotate, pinch with two to zoom</string>
+    <string name="optimize_reset_view">Reset view</string>
+    <string name="optimize_legend_original">Original</string>
+    <string name="optimize_highlight_new">New</string>
+    <string name="optimize_highlight_mod">Modified</string>
+    <string name="optimize_metric_header">Before / after</string>
+    <string name="optimize_metric_before">Before</string>
+    <string name="optimize_metric_after">After</string>
+    <string name="optimize_metric_better">Improved</string>
+    <string name="optimize_metric_worse">Worse</string>
+    <string name="optimize_metric_excl_singular">Signature stress excludes stress-singularity regions</string>
+    <string name="optimize_safe_after">Safe after optimization (safety factor ≥ 2.0)</string>
+    <string name="optimize_still_unsafe">Still not safe after optimization — consult a professional engineer</string>
+    <string name="optimize_no_change">This option does not change the structure, so no figure can be produced</string>
+    <string name="optimize_cheat_warning">This option changes loads or relaxes existing constraints and is not a valid optimization</string>
+    <string name="optimize_unverified_fmt">This option failed finite-element verification: %1$s</string>
+    <string name="optimize_retry">Regenerate</string>
+    <string name="optimize_export_png">Export figure PNG</string>
+    <string name="optimize_export_done_fmt">Saved to: %1$s</string>
+    <string name="optimize_export_failed_fmt">Export failed: %1$s</string>
+    <string name="optimize_disclaimer">AI-assisted advice for reference only; it cannot replace formal engineering verification. Consult a licensed structural engineer for safety-critical work.</string>
+    <string name="optimize_no_suggestion">AI returned no usable optimization option. Please retry.</string>
+    <string name="optimize_solution_fmt">Option %1$d</string>
+    <string name="optimize_not_offered">The current result is already safe; no optimization advice is needed.</string>
+    <!-- v1.2.35 English-mode i18n fixes -->
+    <string name="frame_stability_hint">\n\nGo back to pick another candidate, or tap \"Edit model\" to add braces and strengthen supports so the structure is geometrically stable before computing.</string>
+    <string name="solid_generic_label_selfweight">Dead load</string>
+    <string name="home_collapse">Collapse</string>
+    <string name="home_expand">Expand</string>
+</resources>

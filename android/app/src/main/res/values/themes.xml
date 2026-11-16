@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 口袋物理仿真 · 主题（亮色）。UI 实际配色由 Compose MaterialTheme 控制，这里只提供窗口底色 -->
+<resources>
+    <style name="Theme.PocketSim" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>

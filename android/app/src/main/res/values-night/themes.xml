@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 口袋物理仿真 · 主题（暗色窗口底色） -->
+<resources>
+    <style name="Theme.PocketSim" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>

@@ -1,0 +1,97 @@
+# ============================================================================
+# 口袋仿真 PocketSim · Gitee Go 流水线
+#
+# 为什么用「自定义主机组」而不是 Gitee 云端编译插件：
+#   项目工具链为 AGP 8.5.2 + Gradle 8.14 + JDK17 + Chaquopy（buildPython
+#   强制 Python 3.10），而 Gitee Go 云端插件最高仅 Gradle 4.4 / Python 3.9，
+#   无法构建。因此流水线在「主机组」Agent 上执行（项目原有的云沙箱即可，
+#   tools/restore-env.sh 会幂等准备 JDK17 / Android SDK 34 / Python 3.10）。
+#
+# 首次使用（只需一次）：
+#   1. Gitee 仓库 → 持续集成(Go) → 主机组管理 → 新建主机组，安装 Agent
+#      （Agent 主机即跑 tools/restore-env.sh 的那台 Linux 沙箱/云主机）；
+#   2. 复制主机组 ID，把本文件里的 <<YOUR_HOST_GROUP_ID>> 替换掉；
+#   3. 推送本文件到 main 分支即自动生效。
+#
+# 触发：push 到 main、向 main 发起 PR 时自动运行；共两个阶段：
+#   python-test : pocketsim 全量 pytest（3.10 环境，与构建解释器一致）
+#   android     : 编译 debug/release Kotlin + JVM 单测 + 出 debug APK
+# ============================================================================
+version: '1.0'
+name: pocketsim-ci
+displayName: PocketSim CI（Python 测试 + Android 构建）
+
+triggers:
+  push:
+    branches:
+      precise:
+        - main
+  pr:
+    branches:
+      precise:
+        - main
+
+stages:
+  # ---------------------------------------------------------------- Python 测试
+  - stage:
+      name: python-test
+      displayName: Python 求解器测试
+      strategy: fast
+      trigger: auto
+      steps:
+        - step: shell@agent
+          name: pytest
+          displayName: pytest 全量测试
+          # TODO(首次使用): 替换为 Gitee Go「主机组管理」里的主机组 ID
+          hostGroupID: <<YOUR_HOST_GROUP_ID>>
+          script: |
+            set -euo pipefail
+            # 幂等准备：JDK17 + Android SDK 34 + Python 3.10（已存在则跳过）
+            bash tools/restore-env.sh
+            export PATH="$(mise where python@3.10)/bin:$PATH"
+            cd python
+            python -m pip install -q \
+              -i https://pypi.tuna.tsinghua.edu.cn/simple \
+              -r requirements.txt pytest reportlab openpyxl
+            python -m pytest tests/ -q --tb=short
+
+  # ------------------------------------------------ Android 编译/单测/出包
+  - stage:
+      name: android
+      displayName: Android 编译与单测
+      strategy: fast
+      trigger: auto
+      steps:
+        - step: shell@agent
+          name: build-android
+          displayName: Kotlin 编译 + JVM 单测 + debug APK
+          hostGroupID: <<YOUR_HOST_GROUP_ID>>
+          script: |
+            set -euo pipefail
+            bash tools/restore-env.sh
+            export JAVA_HOME="$(mise where java@17)"
+            export ANDROID_HOME=/workspace/android-sdk
+            export ANDROID_SDK_ROOT=/workspace/android-sdk
+            export PATH="$(mise where python@3.10)/bin:$JAVA_HOME/bin:$PATH"
+            cd android
+
+            # 无全局 gradle 时临时下载 8.14（沙箱通常已自带则直接用）
+            if ! command -v gradle >/dev/null 2>&1; then
+              wget -q https://services.gradle.org/distributions/gradle-8.14-bin.zip -O /tmp/gradle.zip
+              unzip -q /tmp/gradle.zip -d /tmp
+              export PATH="/tmp/gradle-8.14/bin:$PATH"
+            fi
+
+            # 探测沙箱代理：通了才把代理传给 Chaquopy pip；直连主机不加代理
+            PROXY_ARG=""
+            if timeout 1 bash -c 'cat </dev/null >/dev/tcp/127.0.0.1/18080' 2>/dev/null; then
+              PROXY_ARG="-PchaquopyProxy=http://127.0.0.1:18080"
+            fi
+
+            # compile* 同时验证 debug（BuildConfig.DEBUG=true）与 release（false）两侧
+            gradle :app:compileDebugKotlin :app:compileReleaseKotlin \
+                   :app:testDebugUnitTest :app:assembleDebug \
+                   --no-daemon $PROXY_ARG
+
+            echo '==================== 产物 ===================='
+            ls -lh app/build/outputs/apk/debug/*.apk

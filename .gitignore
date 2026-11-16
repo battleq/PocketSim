@@ -1,0 +1,50 @@
+# Gradle / Android 构建产物
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 系统杂项
+.DS_Store
+*.log
+
+# Trae IDE 本地配置
+.trae/
+
+# 签名密钥（仅存本地，绝不入库；丢失将无法发布升级包，请自行备份）
+android/keystore/
+android/*.apk
+
+# 安装包与构建产物（统一走 GitHub Releases，不入库）
+*.apk
+*.aab
+*.jks
+*.keystore
+keystore.properties
+
+# 测试与缓存
+.pytest_cache/
+
+# 本地便携 Gradle 发行版（构建用，不入库）
+gradle-8.14/
+
+# GitHub 快照仓库（独立于 Gitee 的 .git，不入库）
+.git-github/
+
+# 发版过程残留
+android/_release_*.json
+android/_build_*.log
+android/_test_*.log
+android/_tmp_*.log
+.screenshots/

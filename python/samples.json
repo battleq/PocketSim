@@ -1,0 +1,105 @@
+{
+  "description": "离线规则解析器样例集：真实生活问题中文原句与期望解析结果（评测基线，tests/test_parser_samples.py 使用）",
+  "samples": [
+    {
+      "text": "在墙上打进一个钉子，钉子上悬挂3KG重物，墙和钉子是否能够承重，变形有多少",
+      "expect_template": "wall_nail",
+      "expect_params": {"mass_kg": 3.0}
+    },
+    {
+      "text": "往墙上敲一根钢钉，挂一幅5公斤的画",
+      "expect_template": "wall_nail",
+      "expect_params": {"mass_kg": 5.0, "nail_material": "低碳钢"}
+    },
+    {
+      "text": "砖墙上钉了个钉子挂书包，书包大概4公斤",
+      "expect_template": "wall_nail",
+      "expect_params": {"mass_kg": 4.0, "wall_material": "砖砌体"}
+    },
+    {
+      "text": "在混凝土墙上打钉子挂6斤腊肉",
+      "expect_template": "wall_nail",
+      "expect_params": {"mass_kg": 3.0, "wall_material": "混凝土C20"}
+    },
+    {
+      "text": "石膏板墙上能不能挂一个2公斤的相框，钉子3毫米粗",
+      "expect_template": "wall_nail",
+      "expect_params": {"mass_kg": 2.0, "wall_material": "石膏板", "nail_diameter_mm": 3.0}
+    },
+    {
+      "text": "钉子外露30毫米，打入深度40毫米，钉子上挂个8公斤的包",
+      "expect_template": "wall_nail",
+      "expect_params": {"mass_kg": 8.0, "exposed_length_mm": 30.0, "embed_length_mm": 40.0}
+    },
+    {
+      "text": "墙上打个钉子挂3kg",
+      "expect_template": "wall_nail",
+      "expect_params": {"mass_kg": 3.0}
+    },
+    {
+      "text": "悬臂搁板长300毫米厚20毫米，松木材质，末端放10公斤的花盆",
+      "expect_template": "cantilever_shelf",
+      "expect_params": {"length_mm": 300.0, "thickness_mm": 20.0, "material": "松木", "load_kg": 10.0}
+    },
+    {
+      "text": "壁挂隔板伸出40厘米，用密度板做的，厚18毫米，自由端放了5公斤的音箱",
+      "expect_template": "cantilever_shelf",
+      "expect_params": {"length_mm": 400.0, "thickness_mm": 18.0, "material": "密度板", "load_kg": 5.0}
+    },
+    {
+      "text": "松木搁板悬挑250mm厚25mm，端部载荷50N",
+      "expect_template": "cantilever_shelf",
+      "expect_params": {"length_mm": 250.0, "thickness_mm": 25.0, "material": "松木", "load_n": 50.0}
+    },
+    {
+      "text": "一块胶合板搁板一端固定在墙上，长500毫米，厚15毫米，端部放8公斤书",
+      "expect_template": "cantilever_shelf",
+      "expect_params": {"length_mm": 500.0, "thickness_mm": 15.0, "material": "胶合板", "load_kg": 8.0}
+    },
+    {
+      "text": "玻璃壁挂搁板长35厘米厚10毫米，最外端放3公斤摆件",
+      "expect_template": "cantilever_shelf",
+      "expect_params": {"length_mm": 350.0, "thickness_mm": 10.0, "material": "玻璃", "load_kg": 3.0}
+    },
+    {
+      "text": "悬臂木搁板跨度600mm厚度30mm，末端坐个70公斤的人",
+      "expect_template": "cantilever_shelf",
+      "expect_params": {"length_mm": 600.0, "thickness_mm": 30.0, "material": "松木", "load_kg": 70.0}
+    },
+    {
+      "text": "竹搁板悬挑350毫米厚20毫米，末端压5kg米袋",
+      "expect_template": "cantilever_shelf",
+      "expect_params": {"length_mm": 350.0, "thickness_mm": 20.0, "material": "竹材", "load_kg": 5.0}
+    },
+    {
+      "text": "书架隔板两端支撑，跨度800毫米，厚18毫米，胶合板，中间放15公斤的书",
+      "expect_template": "simply_supported_panel",
+      "expect_params": {"length_mm": 800.0, "thickness_mm": 18.0, "material": "胶合板", "load_kg": 15.0}
+    },
+    {
+      "text": "桌子中间坐个人，桌面简支在两个支架上，跨度1米，厚20毫米，松木桌面，人重65公斤",
+      "expect_template": "simply_supported_panel",
+      "expect_params": {"length_mm": 1000.0, "thickness_mm": 20.0, "material": "松木", "load_kg": 65.0}
+    },
+    {
+      "text": "简支层板跨中放10公斤重物，跨度600mm厚度16mm，密度板",
+      "expect_template": "simply_supported_panel",
+      "expect_params": {"length_mm": 600.0, "thickness_mm": 16.0, "material": "密度板", "load_kg": 10.0}
+    },
+    {
+      "text": "桌面板两端搭在支架上，跨中压20kg的显示器，跨度900毫米厚25毫米，用的实木",
+      "expect_template": "simply_supported_panel",
+      "expect_params": {"length_mm": 900.0, "thickness_mm": 25.0, "material": "松木", "load_kg": 20.0}
+    },
+    {
+      "text": "书架中间那层隔板，两边搭在侧板上，净跨700毫米，厚度15毫米，松木板，正中放一盆12公斤的绿植",
+      "expect_template": "simply_supported_panel",
+      "expect_params": {"length_mm": 700.0, "thickness_mm": 15.0, "material": "松木", "load_kg": 12.0}
+    },
+    {
+      "text": "晾衣杆是铝合金的，两端支架，中间挂8公斤湿衣服，跨度1.2米",
+      "expect_template": "simply_supported_panel",
+      "expect_params": {"length_mm": 1200.0, "material": "铝合金", "load_kg": 8.0}
+    }
+  ]
+}

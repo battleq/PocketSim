@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 口袋物理仿真 · 颜色（启动图标背景 + 主题基础色） -->
+<resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
+    <color name="brand_teal">#0F5E68</color>
+    <color name="brand_teal_dark">#093C43</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider 可分享路径：结果摘要图保存在 cacheDir/share/，相机拍照暂存于 cacheDir/camera/ -->
+<paths>
+    <cache-path name="shared_images" path="share/" />
+    <cache-path name="camera_images" path="camera/" />
+</paths>

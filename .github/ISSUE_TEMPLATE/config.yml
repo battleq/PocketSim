@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & discussion
+    url: https://github.com/battleq/PocketSim/discussions
+    about: For usage questions, example cases and feature inquiries, please open a Discussions thread instead of an Issue.
+  - name: Show and tell
+    url: https://github.com/battleq/PocketSim/discussions/categories/show-and-tell
+    about: Share real-life mechanics cases you have analyzed and your result images.

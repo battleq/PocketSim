@@ -1,0 +1,843 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 口袋物理仿真 · 集中中文文案（含免责声明全文） -->
+<resources>
+    <string name="app_name">PocketSim</string>
+
+    <!-- ============ 通用 ============ -->
+    <string name="btn_back">返回</string>
+    <string name="btn_retry">重试</string>
+    <string name="error_unknown">出错了：%1$s</string>
+
+    <!-- ============ 免责声明 ============ -->
+    <string name="disclaimer_short">结果仅供生活参考，不可用于专业工程</string>
+    <string name="disclaimer_full">免责声明：本应用的所有计算结果均基于简化力学模型与材料代表值生成，仅供日常生活场景的粗略参考，不能替代专业工程分析。任何涉及人身安全、结构安全或重大财产安全的事项，请务必咨询专业工程师。使用本应用所产生的一切后果由使用者自行承担。</string>
+    <string name="share_watermark">仅供参考</string>
+
+    <!-- ============ 主页 ============ -->
+    <string name="home_title">口袋仿真</string>
+    <string name="home_problem_label">描述你的问题</string>
+    <string name="home_problem_placeholder_frame">例如：用松木 30×40 木方做个靠墙的双层书架，宽 400 高 1500，每层放 20 公斤书，会晃吗？（可附结构照片）</string>
+    <string name="home_btn_ai">AI 建模</string>
+    <string name="polish_action">AI 润色</string>
+    <string name="polish_undo">撤销润色</string>
+    <string name="polish_done">已润色</string>
+    <string name="home_hint_ai_off">未配置或无法连接 AI 时，请先到设置里填写接口信息</string>
+    <string name="home_examples_header">示例场景</string>
+    <string name="home_example_fill">填入</string>
+    <string name="home_example_cat_structure">承重结构</string>
+    <string name="home_example_cat_thermal">温度 · 时间历程</string>
+    <string name="home_example_cat_fluid">风与渗流</string>
+    <string name="home_example_cat_solid">三维实体</string>
+    <string-array name="home_examples_structure">
+        <item>墙上用膨胀螺栓固定一块 80 厘米长、20 厘米宽、3 厘米厚的松木搁板，靠墙端固定，远端放 10 公斤书，最大挠度多少？</item>
+        <item>用 30×40 毫米松木方做双层书架，宽 80 高 150 深 30 厘米，四角立柱落地固定，每层隔板放 20 公斤书，会晃吗？</item>
+        <item>1.2 米长铝合金方管（40×40×2 毫米）两端搭在墙上简支，中间挂 5 公斤湿衣服，会压弯吗？</item>
+    </string-array>
+    <string-array name="home_examples_thermal">
+        <item>2 米长低碳钢管（外径 50 毫米、壁厚 3 毫米）两头焊死在墙上，从 20℃ 升到 150℃，焊口会被顶裂吗？</item>
+        <item>80 厘米长铝合金方管（20×20×2 毫米）一端固定在墙上成悬臂，端头挂 10 公斤，温度从 20℃ 升到 80℃ 再降回 20℃，会出问题吗？</item>
+    </string-array>
+    <string-array name="home_examples_fluid">
+        <item>8 级大风天，2 米高、3 米长、24 厘米厚的砖砌体围墙，底面固定，迎风面受风压，会不会被吹倒？</item>
+        <item>12 米高混凝土重力坝，上游水位 11 米，坝基会不会渗漏或被水推着滑走？</item>
+    </string-array>
+    <string-array name="home_examples_solid">
+        <item>鱼缸侧面有一块竖直的玻璃板，60 厘米长、40 厘米高、8 毫米厚，底边和左右两侧粘在缸体上固定，上沿敞开，缸里装满水（水深 40 厘米）从一侧压向玻璃，玻璃会不会裂？</item>
+        <item>1.2 米长、0.6 米宽、10 厘米厚的钢筋混凝土阳台板，四边搭在墙上，上面站 4 个成年人（共约 300 公斤），楼板会不会裂？</item>
+        <item>一块 1 米长、0.5 米宽、20 毫米厚的钢板，左端固定，右端沿板面方向受 200 kN 拉力，板正中心挖了一个贯穿厚度的圆孔（直径 16 厘米），孔边会不会因应力集中被拉裂？最大应力出现在哪里？</item>
+    </string-array>
+    <!-- 英制示例（选择英制单位时使用；温度仍用 ℃，风力仍用蒲福风级） -->
+    <string-array name="home_examples_structure_imperial">
+        <item>墙上用膨胀螺栓固定一块 32 英寸长、8 英寸宽、1.2 英寸厚的松木搁板，靠墙端固定，远端放 22 磅书，最大挠度多少？</item>
+        <item>用 1.2×1.5 英寸松木方做双层书架，宽 32 高 59 深 12 英寸，四角立柱落地固定，每层隔板放 44 磅书，会晃吗？</item>
+        <item>4 英尺长铝合金方管（1.5×1.5×1/16 英寸）两端搭在墙上简支，中间挂 11 磅湿衣服，会压弯吗？</item>
+    </string-array>
+    <string-array name="home_examples_thermal_imperial">
+        <item>80 英寸长低碳钢管（外径 2 英寸、壁厚 1/8 英寸）两头焊死在墙上，从 20℃ 升到 150℃，焊口会被顶裂吗？</item>
+        <item>32 英寸长铝合金方管（3/4×3/4×1/16 英寸）一端固定在墙上成悬臂，端头挂 22 磅，温度从 20℃ 升到 80℃ 再降回 20℃，会出问题吗？</item>
+    </string-array>
+    <string-array name="home_examples_fluid_imperial">
+        <item>8 级大风天，6.5 英尺高、10 英尺长、9.5 英寸厚的砖砌体围墙，底面固定，迎风面受风压，会不会被吹倒？</item>
+        <item>39 英尺高混凝土重力坝，上游水位 36 英尺，坝基会不会渗漏或被水推着滑走？</item>
+    </string-array>
+    <string-array name="home_examples_solid_imperial">
+        <item>鱼缸侧面有一块竖直的玻璃板，24 英寸长、16 英寸高、5/16 英寸厚，底边和左右两侧粘在缸体上固定，上沿敞开，缸里装满水（水深 16 英寸）从一侧压向玻璃，玻璃会不会裂？</item>
+        <item>4 英尺长、2 英尺宽、4 英寸厚的钢筋混凝土阳台板，四边搭在墙上，上面站 4 个成年人（共约 660 磅），楼板会不会裂？</item>
+        <item>一块 40 英寸长、20 英寸宽、3/4 英寸厚的钢板，左端固定，右端沿板面方向受 45000 磅拉力，板正中心钻了一个贯穿厚度的圆孔（直径 6.3 英寸），孔边会不会因应力集中被拉裂？最大应力出现在哪里？</item>
+    </string-array>
+
+    <!-- ============ AI 技能 ============ -->
+    <string name="home_skill_header">AI技能</string>
+    <string name="home_skill_none">不使用</string>
+    <string name="home_skill_custom">＋ 自定义</string>
+    <string name="home_skill_conservative_name">保守校核</string>
+    <string name="home_skill_conservative_brief">取最不利工况与偏保守取值，安全优先</string>
+    <string name="home_skill_quick_name">快速估算</string>
+    <string name="home_skill_quick_brief">简化模型、少杆件，先给量级结论</string>
+    <string name="skill_dialog_title">自定义 AI 技能</string>
+    <string name="skill_manager_hint">自定义技能会在本次建模时追加给 AI，只调整建模取向，不改变输出格式；内置技能不可修改。</string>
+    <string name="skill_empty">还没有自定义技能，可在下方新建。</string>
+    <string name="skill_new">新建自定义技能</string>
+    <string name="skill_editing">编辑：%1$s</string>
+    <string name="skill_name_label">技能名称</string>
+    <string name="skill_brief_label">适用场景（一句话）</string>
+    <string name="skill_instruction_label">给 AI 的指令</string>
+    <string name="skill_save">保存</string>
+    <string name="skill_close">关闭</string>
+    <string name="skill_edit">编辑</string>
+    <string name="skill_delete">删除</string>
+    <string name="skill_cancel_edit">取消编辑</string>
+    <string name="skill_required">技能名称和给 AI 的指令不能为空</string>
+
+    <!-- ============ AI 对话 ============ -->
+    <string name="chat_title">AI 对话理解</string>
+    <string name="chat_rebuild_original">[原始问题] %1$s\n\n</string>
+    <string name="chat_rebuild_feedback">[用户反馈：上次模型不合理，按此要求重新建模]\n</string>
+    <string name="chat_input_placeholder">补充描述，或回答上面的问题…</string>
+    <string name="chat_loading">正在思考</string>
+    <string name="chat_error_network">AI 接口不可用（无网络、未配置 Key 或接口异常）。请检查网络与设置后重试，或用文字把结构描述得更完整。</string>
+    <string name="chat_done">模型已建好，请前往预览确认。</string>
+    <string name="chat_add_photo">添加结构照片</string>
+    <string name="chat_remove_photo">移除照片</string>
+    <string name="home_take_photo">拍照</string>
+    <string name="home_section_model">模型选择</string>
+    <string name="home_section_material">材料定义</string>
+    <string name="home_params_box_title">建模参数（可选）</string>
+    <string name="chat_photo_attached_fmt">已附 %1$d 张照片</string>
+
+    <!-- ============ 参数确认 ============ -->
+    <string name="param_title">参数确认</string>
+    <string name="param_from_ai_tag">AI 已按你的描述预填以下参数，可随时修改</string>
+    <string name="param_from_offline_tag">离线识别已按你的描述预填以下参数，可随时修改</string>
+    <string name="param_pending_tag">待补充</string>
+    <string name="param_pending_hint">离线识别未获取到该项，请补充或确认</string>
+    <string name="param_material_header">材料</string>
+    <string name="param_material_pick">选择材料</string>
+    <string name="param_material_manual">手动输入材料名</string>
+    <string name="param_material_lookup">联网检索材料参数</string>
+    <string name="param_material_lookup_ing">正在联网检索材料参数…</string>
+    <string name="param_material_lookup_failed">联网检索失败：%1$s</string>
+    <string name="param_material_missing">模板未定义材料参数</string>
+    <string name="param_mesh_header">网格档位</string>
+    <string name="mesh_coarse">粗糙（最快）</string>
+    <string name="mesh_medium">中等（推荐）</string>
+    <string name="mesh_fine">精细（最慢）</string>
+    <string name="mesh_ultra">超精细（最高精度）</string>
+    <string name="param_btn_run">开始计算</string>
+    <string name="param_running">正在本地求解…</string>
+    <string name="param_run_failed">求解失败：%1$s</string>
+    <string name="param_value_invalid">数值无效</string>
+    <string name="param_required_missing">该项必填</string>
+
+    <!-- 来源标签 -->
+    <string name="source_builtin">内置</string>
+    <string name="source_ai">AI 提取</string>
+    <string name="source_web">联网检索</string>
+    <string name="source_user">自填</string>
+
+    <!-- ============ 结果页 ============ -->
+    <string name="result_title">计算结果</string>
+    <string name="metric_max_deflection">最大变形</string>
+    <string name="metric_max_stress">最大应力</string>
+    <string name="metric_safety">安全系数</string>
+    <string name="unit_mm">mm</string>
+    <string name="unit_mpa">MPa</string>
+    <string name="safety_safe">安全</string>
+    <string name="safety_caution">注意</string>
+    <string name="safety_danger">危险</string>
+    <string name="safety_unknown">—</string>
+    <!-- 结论横幅（安全系数偏低时置顶醒目提示） -->
+    <string name="verdict_banner_danger_title">结论：撑不住，会损坏</string>
+    <string name="verdict_banner_danger_body">安全系数 %1$s 已低于 1.0：杆件应力超过材料强度代表值，实际使用会明显弯曲甚至断裂。请减小荷载，或加粗截面、换用更强材料后重算。</string>
+    <string name="verdict_banner_caution_title">结论：余量偏小，请谨慎</string>
+    <string name="verdict_banner_caution_body">安全系数 %1$s 低于 2.0：正常使用可能变形偏大，材料有瑕疵或长期受力时风险更高。建议减小荷载或加大截面留出余量。</string>
+    <string name="verdict_banner_stress_fmt">最大应力 %1$s（受力最大：杆件 %2$d）</string>
+    <string name="verdict_banner_weak_header">薄弱部位与破坏形式</string>
+    <string name="verdict_banner_weak_fmt">杆件 %1$d（节点 %2$d→%3$d，%4$s %5$s）：%6$s，应力 %7$s ≈ 材料强度 %8$s 的 %9$s 倍</string>
+    <string name="verdict_banner_form_bending">受弯正应力超标，跨中受拉侧会先出现横向裂缝，随后明显下垂甚至折断</string>
+    <string name="verdict_banner_form_compress">受压承载力超标，会先出现压屈或局部失稳，然后突然塌陷（不是慢慢弯）</string>
+    <string name="verdict_banner_form_axial">轴向拉压应力超标，受拉侧会开裂、受压侧会压溃</string>
+    <string name="verdict_banner_advice_header">怎么加强</string>
+    <string name="verdict_banner_advice_load_fmt">减小荷载：当前荷载约为承载力的 %1$s 倍，要留出安全余量（系数 1.5）需降到现在的 %2$s%% 左右</string>
+    <string name="verdict_banner_advice_section_fmt">加粗截面：受弯高度由 %1$s 增到约 %2$s（截面 %3$s → %4$s），应力可降到 1/%5$s</string>
+    <string name="verdict_banner_advice_section_big_fmt">单靠加粗不现实：要让应力回到安全范围，截面高度需要放大到约 %1$s 倍（%2$s → %3$s），建议优先改变结构形式</string>
+    <string name="verdict_banner_advice_span">改变结构形式：增加中间立柱/支点或斜撑，弯矩大致随跨度平方下降（跨度减半，弯矩约降到 1/4）</string>
+    <string name="verdict_banner_advice_material">换用强度更高的材料（如松木→桦木、铝合金→钢），或减小跨度后再算</string>
+    <string name="render_von_mises">等效应力</string>
+    <string name="render_displacement">位移</string>
+    <string name="deform_scale_fmt">变形放大 %1$d×</string>
+    <string name="contour_title">云图</string>
+    <string name="analogy_title">生活化类比</string>
+    <string name="analogy_default">变形量级不大，你可以结合最大变形数值直观感受一下。</string>
+    <string name="analysis_title">AI 分析过程</string>
+    <string name="analysis_generated_note">本段文字由端侧规则模板自动生成，仅供参考</string>
+    <string name="checks_title">校核项</string>
+    <string name="assumptions_title">建模假设</string>
+    <string name="mesh_info_title">网格与耗时</string>
+    <string name="mesh_info_fmt">%1$s网格 · %2$d 节点自由度 · %3$d 单元 · 求解耗时 %4$s ms</string>
+    <string name="share">分享</string>
+    <string name="share_chooser_title">分享计算结果</string>
+    <string name="share_failed">分享失败：%1$s</string>
+    <string name="share_text_fmt">【口袋仿真】%1$s：最大变形 %2$s，最大应力 %3$s，安全系数 %4$s（%5$s）。结果仅供生活参考，不可用于专业工程。</string>
+    <string name="check_item_fmt">%1$s = %2$s / 限值 %3$s（安全系数 %4$s）</string>
+
+    <!-- 降级 / 加密提示（DowngradeNotice） -->
+    <string name="notice_downgraded">已自动降级网格</string>
+    <string name="notice_refined">已自动加密网格</string>
+    <string name="notice_reason_fmt">原因：%1$s</string>
+    <string name="notice_downgraded_desc">为保证在手机上流畅完成计算，已切换到更粗的网格档位，精度略有下降。</string>
+
+    <!-- ============ 通用框架建模（AI 任意结构，P1） ============ -->
+    <string name="home_mode_frame">通用结构·自动</string>
+    <string name="home_mode_frame_3d">三维结构</string>
+    <string name="home_mode_3d_beam">空间梁元</string>
+    <string name="home_mode_3d_solid">三维实体·TET4</string>
+    <string name="home_mode_3d_beam_hint">空间杆件结构（刚架/桁架/桌架），6 自由度梁单元</string>
+    <string name="home_mode_3d_solid_hint">长方体/圆柱/板等任意三维实体，内部应力与变形云图；墙体受风用 box+底面固定+迎风面压力表达</string>
+    <string name="frame_chat_greeting">你好！可以发 1–3 张结构照片，再用一句话补充说明（材料、哪里固定、放多重的物件），我会照着照片把结构建成梁杆模型并计算变形与受力；照片看不出来的关键信息我会追问你。也可以只打字描述。</string>
+    <string name="solid_chat_greeting">你好！说说要算的三维实体：几何尺寸、材料、哪里固定、受什么载荷（水压、土压、风压、堆载、自重）。例如：60×40 厘米、8 毫米厚的鱼缸玻璃板，底边和左右两侧固定，缸里装满 40 厘米深的水，会不会裂？</string>
+    <string name="frame_chat_done">模型已建好，请前往预览确认。</string>
+    <string name="frame_preview_title">模型预览</string>
+    <string name="frame_preview_hint">AI 按你的描述建立了下面的计算模型。杆件截面与材料参数为常见代表值，确认无误后开始计算；结果仅供参考。</string>
+    <string name="frame_summary_title">模型信息</string>
+    <string name="frame_summary_fmt">节点 %1$d 个 · 杆件 %2$d 根 · 支座 %3$d 处</string>
+    <string name="frame_materials_fmt">材料：%1$s</string>
+    <string name="frame_supports_fmt">支座：%1$s</string>
+    <string name="frame_loads_fmt">载荷：%1$s</string>
+    <string name="frame_members_title">杆件清单</string>
+    <string name="frame_support_fixed">固定</string>
+    <string name="frame_support_pinned">铰接</string>
+    <string name="frame_support_roller">滚轴</string>
+    <string name="frame_load_force_fmt">节点 %1$d 集中力 %2$s</string>
+    <string name="frame_load_moment_fmt">节点 %1$d 力偶 %2$s</string>
+    <string name="frame_load_udl_fmt">杆件 %1$d 均布 %2$s</string>
+    <string name="frame_load_area_fmt">面荷载：%1$d 根杆件共 %2$s</string>
+    <string name="frame_load_thermal_fmt">杆件 %1$d 温度变化 %2$s°C</string>
+    <string name="frame_btn_run">开始计算</string>
+    <string name="frame_running">正在本地求解…</string>
+    <string name="frame_run_failed">求解失败：%1$s</string>
+    <string name="frame_result_title">计算结果</string>
+    <string name="frame_governing_fmt">受力最大：杆件 %1$d</string>
+    <string name="frame_deform_title">变形图</string>
+    <string name="frame_deform_note">实线为变形后形状（按放大系数显示），虚线为原始形状</string>
+    <string name="frame_3d_hint">三维视图：单指拖动旋转 · 双指捏合缩放</string>
+    <string name="frame_3d_reset">重置视角</string>
+    <string name="frame_buckling_title">稳定性</string>
+    <string name="frame_thermal_title">温度</string>
+    <string name="frame_thermal_max_dt_fmt">最大温度变化：%1$s°C（基准 20°C）</string>
+    <string name="frame_thermal_over_temp">超温警告</string>
+    <string name="frame_thermal_note_fmt">每杆 ΔT：%1$s</string>
+    <string name="frame_narrative_title">分析过程</string>
+    <string name="frame_members_force_title">杆件受力</string>
+    <string name="frame_member_tension">拉</string>
+    <string name="frame_member_compression">压</string>
+    <string name="frame_info_fmt">%1$d 节点 · %2$d 杆件 · %3$d 支座 · 求解 %4$s ms</string>
+
+    <!-- ============ 结果追问 / 修改重算（v0.3.0） ============ -->
+    <string name="frame_followup_title">继续追问</string>
+    <string name="frame_followup_entry">继续追问 / 修改重算</string>
+    <string name="frame_back_home">返回首页</string>
+    <string name="frame_pdf_export">导出 PDF 报告</string>
+    <string name="frame_pdf_exporting">正在生成 PDF…</string>
+    <string name="frame_followup_greeting">关于这次计算结果，有看不懂的地方可以直接问我；想改条件也直接说——比如"重量加到 30 公斤""换成钢材""载荷挪到上层"，我改好模型后你确认再重算。</string>
+    <string name="frame_followup_input_hint">提问，或说要改什么…</string>
+    <string name="frame_followup_summary_fmt">最大变形 %1$s · 最大应力 %2$s · 安全系数 %3$s（%4$s）</string>
+    <string name="frame_followup_model_ready">已按新条件改好模型，请前往预览确认。</string>
+    <string name="frame_followup_validate_failed">这次的修改没能通过校验：%1$s。请把改动说得更具体一些。</string>
+
+    <!-- ============ 设置 ============ -->
+    <string name="settings_title">设置</string>
+    <string name="settings_llm_header">AI 接口（OpenAI 兼容）</string>
+    <string name="settings_base_url">API Base URL</string>
+    <string name="settings_base_url_hint">形如 https://ark.cn-beijing.volces.com/api/v3、https://api.deepseek.com（自动拼接 /chat/completions）</string>
+    <string name="settings_api_key">API Key</string>
+    <string name="settings_model">模型名</string>
+    <string name="settings_model_hint">例如 doubao-seed-2-0-pro-260215、deepseek-chat、kimi-k3.1-pro 等</string>
+    <!-- 厂商预设：按 Base URL 自动识别，一键填充地址+模型；Custom 为通用 OpenAI 兼容通道 -->
+    <string name="settings_provider_label">厂商预设（一键填充地址 + 模型）</string>
+    <string name="settings_provider_kimi">Kimi（月之暗面）</string>
+    <string name="settings_provider_doubao">豆包（火山方舟）</string>
+    <string name="settings_provider_deepseek">DeepSeek</string>
+    <string name="settings_provider_custom">自定义（OpenAI / Anthropic 兼容）</string>
+    <string name="settings_provider_hint_kimi">Kimi 始终开启思考，可在下方调节推理强度与高速模式；默认 https://api.moonshot.cn/v1</string>
+    <string name="settings_provider_hint_doubao">豆包深度思考模型默认关闭思考以提速（实测 1~5s 返回）；默认 https://ark.cn-beijing.volces.com/api/v3</string>
+    <string name="settings_provider_hint_deepseek">自动关闭思考（reasoning_effort=none），避免建模抽取被长时间思考拖慢；默认 https://api.deepseek.com</string>
+    <string name="settings_provider_hint_custom">通用兼容通道：Base URL 填到 /v1 即可，会自动补全接口路径。支持 OpenAI 的 /chat/completions 与 Anthropic 的 /v1/messages（Claude 中转），也可填完整接口地址</string>
+    <string name="settings_vision_model">视觉模型（发照片时用，可选）</string>
+    <string name="settings_vision_model_hint">主模型不支持图片时填支持视觉的模型名；留空则沿用上面的模型名</string>
+    <string name="settings_reasoning_effort">建模推理强度（Kimi）</string>
+    <string name="settings_reasoning_effort_hint">仅当 Base URL 为 Kimi（moonshot/kimi）时生效。Kimi 始终开启思考：low 最快，high 平衡（默认），max 最强但最慢</string>
+    <string name="settings_reasoning_low">low · 快</string>
+    <string name="settings_reasoning_high">high · 平衡</string>
+    <string name="settings_reasoning_max">max · 最强</string>
+    <string name="settings_high_speed">高速建模（Kimi 高速版）</string>
+    <string name="settings_high_speed_hint">开启后 Kimi 请求自动切换高速版模型，官方承诺同效果、速度约 2–3 倍，token 消耗约 2 倍；若发现建模质量下降，关闭即可恢复</string>
+    <string name="settings_timeout">请求超时（秒）</string>
+    <string name="settings_mesh_default">默认网格档位</string>
+    <string name="settings_candidate_header">AI 建模候选</string>
+    <string name="settings_candidate_count">首轮候选数量</string>
+    <string name="settings_candidate_count_fmt">%1$d</string>
+    <string name="settings_candidate_divergence">候选差异控制</string>
+    <string name="settings_candidate_divergence_hint">开启后过滤掉与基准差异过大的候选（框架：节点差≤3、杆件差≤4；其他：关键尺寸偏差≤20%）</string>
+    <string name="candidate_select_title">选择建模方案</string>
+    <string name="candidate_select_subtitle">AI 给出了同一结构的几种合理简化，选一个进入预览：</string>
+    <string name="candidate_select_pick">选用此方案</string>
+    <string name="candidate_card_label">方案 %1$d</string>
+    <string name="settings_about_header">关于</string>
+    <string name="settings_version_fmt">版本 %1$s</string>
+    <string name="settings_oss_entry">开源许可</string>
+    <string name="oss_title">开源许可声明</string>
+    <string name="oss_view_license">查看许可证全文</string>
+    <string name="oss_self">PocketSim 口袋仿真自有代码</string>
+    <string name="oss_third">第三方依赖</string>
+    <string name="oss_copyleft_note">以下组件为动态链接的 LGPL 许可，已按法律要求声明。本 App 闭源商用，但不修改或静态编译这些组件。</string>
+    <string name="oss_name_fmt">%1$s（v%2$s）</string>
+    <string name="oss_self_lic_fmt">%1$s — %2$s</string>
+    <string name="oss_open_core">开源核心求解引擎</string>
+    <string name="oss_closed">商业闭源 · All Rights Reserved</string>
+
+    <!-- 材料库 -->
+    <string name="material_title">材料库</string>
+    <string name="material_subtitle">内置常规材料 · 可手动添加或联网检索补充</string>
+    <string name="material_add_custom">添加自定义材料</string>
+    <string name="material_search_web">联网检索材料</string>
+    <string name="material_search_hint">输入材料名，如 304 不锈钢、橡木…</string>
+    <string name="material_search_btn">检索</string>
+    <string name="material_searching">检索中…</string>
+    <string name="material_name">材料名称</string>
+    <string name="material_category">分类</string>
+    <string name="material_e">弹性模量 E（MPa）</string>
+    <string name="material_nu">泊松比 ν</string>
+    <string name="material_density">密度（kg/m³）</string>
+    <string name="material_strength">强度代表值（MPa）</string>
+    <string name="material_strength_type">强度类型（如：屈服强度/抗拉强度/抗压强度）</string>
+    <string name="material_e_fmt">弹性模量 E（%1$s）</string>
+    <string name="material_density_fmt">密度（%1$s）</string>
+    <string name="material_strength_fmt">强度代表值（%1$s）</string>
+    <string name="material_strength_value_fmt">%1$s：%2$s</string>
+    <string name="material_notes">备注</string>
+    <string name="material_save">保存到材料库</string>
+    <string name="material_saved">已保存</string>
+    <string name="material_delete">删除</string>
+    <string name="material_delete_title">删除材料</string>
+    <string name="material_delete_confirm">确定从材料库删除「%1$s」？内置材料不可删除。</string>
+    <string name="material_deleted">已删除：%1$s</string>
+    <string name="material_source_builtin">内置</string>
+    <string name="material_source_web">联网</string>
+    <string name="material_source_user">自定义</string>
+    <string name="material_search_fail">检索失败：%1$s</string>
+    <string name="material_name_required">请填写材料名称</string>
+    <string name="material_e_required">请填写弹性模量</string>
+    <string name="material_nu_required">请填写泊松比</string>
+    <string name="material_list_empty">暂无自定义或联网材料，内置材料在求解时自动匹配</string>
+    <string name="home_material_entry">材料库</string>
+
+    <!-- ============ 语言 / 单位制 ============ -->
+    <string name="lang_system">跟随系统</string>
+    <string name="lang_zh">中文</string>
+    <string name="lang_en">English</string>
+    <string name="unit_system_metric">公制（mm · N · MPa）</string>
+    <string name="unit_system_imperial">英制（in · lb · psi）</string>
+    <string name="launcher_units_label">单位</string>
+    <string name="settings_units_header">单位制</string>
+    <string name="settings_units_hint">默认跟随系统区域；切换后预览页与结果页按所选单位制显示，内部计算仍用公制。</string>
+    <string name="settings_language_header">语言</string>
+    <string name="settings_language_hint">切换界面语言（重启页面后生效）</string>
+    <string name="launcher_language_label">语言</string>
+
+    <!-- ============ 启动页 ============ -->
+    <string name="launcher_subtitle">让物理仿真走进生活</string>
+    <string name="launcher_mech_title">力学仿真</string>
+    <string name="launcher_mech_desc">梁杆框架与三维实体：受力、变形、应力与安全系数</string>
+    <string name="launcher_thermal_title">温度仿真</string>
+    <string name="launcher_thermal_desc">温度升降引起的热膨胀与热应力，与机械载荷联合分析</string>
+    <string name="launcher_fluid_title">流体仿真</string>
+    <string name="launcher_fluid_desc">风压与墙体倾覆、坝基渗流扬压力与抗滑稳定</string>
+    <string name="launcher_new_project">新建项目</string>
+    <string name="launcher_open_project">打开历史项目</string>
+    <string name="launcher_hide_projects">收起项目列表</string>
+    <string name="launcher_activate">输入邀请码激活 AI</string>
+    <string name="launcher_activated_fmt">已激活 · 每日 %1$d 次</string>
+    <string name="launcher_no_projects">暂无已保存的项目，完成一次分析后可在结果页保存</string>
+    <string name="launcher_unnamed">未命名项目</string>
+    <string name="launcher_project_stress_fmt">应力 %1$s · 安全系数 %2$s</string>
+    <string name="launcher_delete">删除</string>
+
+    <!-- ============ 设置页补充 ============ -->
+    <string name="settings_activate">输入邀请码激活</string>
+    <string name="settings_activated_fmt">已激活 · 每日 %1$d 次（查看/更换）</string>
+
+    <!-- ============ 通用补充 ============ -->
+    <string name="polish_failed_default">润色失败，请稍后重试</string>
+    <string name="cancel">取消</string>
+    <string name="error_unknown_default">未知错误</string>
+    <string name="unspecified">未指定</string>
+
+    <!-- ============ 材料库补充 ============ -->
+    <string name="material_lookup_desc">内置库仅有常规材料。可让 AI 联网检索冷门材料（如 304 不锈钢、橡木）的力学代表值，结果会存入本地材料库。</string>
+    <string name="material_manual_desc">对于联网检索不准确或无法检索的材料，可直接手动录入有限元参数。</string>
+    <string name="material_category_custom">自定义</string>
+    <string name="material_strength_unknown">未知</string>
+    <string name="material_all_fmt">全部材料（%1$d）</string>
+
+    <!-- ============ 三维实体预览（SolidPreview） ============ -->
+    <string name="solid_preview_title">三维实体预览</string>
+    <string name="solid_regen_title">修改计算模型</string>
+    <string name="solid_regen_hint">哪里不对就让 AI 重新建模，例如："墙高应是 3 米"、"这是 10 级风，不是 8 级"、"墙厚 240 毫米"。</string>
+    <string name="solid_regen_placeholder">比如：墙厚记错了，应该是 370 毫米…</string>
+    <string name="solid_regen_btn">让 AI 重建模</string>
+    <string name="solid_modify_btn">不满意，修改模型</string>
+    <string name="solid_running">正在求解三维实体…</string>
+    <string name="solid_default_name">三维实体墙体</string>
+    <string name="solid_preview_desc">把问题简化成「一块墙底固定的实体墙」：用四面体有限元计算墙体内部的位移与应力分布，能看到墙根开裂、受压破坏与应力集中。确认后开始网格划分与求解。</string>
+    <string name="solid_schematic_note">示意图（按比例）：灰色为墙体，墙底固定（斜线），箭头为风压方向。</string>
+    <string name="solid_info_title">模型信息</string>
+    <string name="solid_dim_fmt">墙体尺寸：长 %1$s × 高 %2$s × 厚 %3$s</string>
+    <string name="solid_material_fmt">材料：%1$s</string>
+    <string name="solid_load_fmt">风荷载：%1$s</string>
+    <string name="solid_mesh_hint">网格档位（影响精度与耗时）</string>
+    <string name="solid_compute_content">计算内容：四节点四面体有限元（位移/应力场）+ 墙根抗弯、抗压、抗倾覆校核</string>
+    <string name="solid_fine_warn">当前为细网格（fine/ultra），四面体单元数量较多，求解可能耗时十几秒甚至更久，并占用较多内存。若手机性能一般或只想快速估算，建议在 AI 建模时改用 medium 或 coarse 网格。</string>
+    <string name="solid_normal_warn">三维实体（TET4）采用四面体有限元，计算量明显大于梁元。墙体尺寸大或选细网格时，求解可能耗时数秒到十几秒；如遇卡顿，可改用更粗的网格档位。</string>
+    <string name="solid_mat_e_fmt">弹性模量 %1$s</string>
+    <string name="solid_mat_nu_fmt">泊松比 %1$s</string>
+    <string name="solid_mat_density_fmt">密度 %1$s</string>
+    <string name="solid_wind_cp_fmt">，净体型系数 %1$s</string>
+    <string name="solid_wind_pressure_fmt">风压 %1$s%2$s</string>
+    <string name="solid_wind_beaufort_fmt">风级 %1$d 级（约 %2$s）%3$s</string>
+    <string name="solid_wind_speed_fmt">风速 %1$s%2$s</string>
+    <string name="solid_dim_length_fmt">长 %1$s</string>
+    <string name="solid_dim_height_fmt">高 %1$s</string>
+    <string name="solid_dim_thickness_fmt">厚 %1$s</string>
+    <string name="solid_wind_arrow">风压 →</string>
+
+    <!-- ============ 流体预览（FlowPreview） ============ -->
+    <string name="flow_preview_title">流体模型预览</string>
+    <string name="flow_running">正在求解流场…</string>
+    <string name="flow_default_name">风荷载墙体</string>
+    <string name="flow_preview_desc">把问题简化成「风垂直吹向一堵独立墙」：下方是墙体剖面与来流方向，确认后开始流场求解与抗风稳定性校核。</string>
+    <string name="flow_schematic_note">示意图（按比例）：灰色为墙体立面，左侧箭头为来流方向。</string>
+    <string name="flow_info_title">模型信息</string>
+    <string name="flow_dim_fmt">墙体尺寸：高 %1$s × 厚 %2$s × 长 %3$s</string>
+    <string name="flow_material_fmt">材料：%1$s</string>
+    <string name="flow_wind_speed_fmt">风速 %1$s</string>
+    <string name="flow_wind_beaufort_fmt">风级 %1$d 级（约 %2$s）</string>
+    <string name="flow_wind_unspecified">风速未指定</string>
+    <string name="flow_inflow_fmt">来流：%1$s</string>
+    <string name="flow_compute_content">计算内容：二维势流有限元（流速/压力/流线）+ 抗倾覆/抗滑移/墙根抗弯校核</string>
+    <string name="flow_wall_height_fmt">墙高 %1$s</string>
+    <string name="flow_thickness_fmt">厚 %1$s</string>
+    <string name="flow_wind_arrow">风向 →</string>
+
+    <!-- ============ 三维实体结果（SolidResult） ============ -->
+    <string name="solid_result_default_name">三维实体结果</string>
+    <string name="solid_verdict_danger">危险：墙体可能开裂或倾覆</string>
+    <string name="solid_verdict_caution">注意：接近承载力极限</string>
+    <string name="solid_safety_fmt">综合安全系数 %1$s</string>
+    <string name="solid_weak_part_fmt">最薄弱部位：%1$s</string>
+    <string name="solid_critical_speed_fmt">临界风速：超过约 %1$s%2$s时，%3$s将控制安全系数降到 1.0 以下。</string>
+    <string name="solid_critical_beaufort_fmt">（约 %1$d 级风）</string>
+    <string name="solid_critical_mode_default">承载</string>
+    <string name="solid_top_disp_title">墙顶侧移</string>
+    <string name="solid_bending_stress_title">墙根弯曲应力</string>
+    <string name="solid_safety_title">安全系数</string>
+    <string name="solid_max_disp_fmt">最大位移 %1$s</string>
+    <string name="solid_max_compression_fmt">最大压应力 %1$s</string>
+    <string name="solid_vonmises_title">应力云图（von Mises）</string>
+    <string name="solid_stress_low_fmt">0 %1$s（低应力）</string>
+    <string name="solid_stress_high_fmt">%1$s（高应力）</string>
+    <string name="solid_3d_hint">单指拖动旋转 · 双指捏合缩放；云图按四面体单元节点平均应力着色，表面网格线为单元边界。</string>
+    <string name="solid_top_disp_fmt">墙顶侧移 %1$s，</string>
+    <string name="solid_result_summary_fmt">墙顶侧移 %1$s，墙根弯曲应力 %2$s，最大压应力 %3$s。</string>
+    <string name="solid_checks_title">工程校核</string>
+    <string name="solid_check_safety_fmt">%1$s：安全系数 %2$s</string>
+    <string name="solid_check_load_resist_fmt">作用 %1$s %2$s ／ 抗力 %3$s %4$s</string>
+    <string name="solid_wind_load_summary_fmt">风压 %1$s（净体型系数 %2$s），总风荷载 %3$s；墙体自重 %4$s。</string>
+    <string name="solid_theory_compare_title_fmt">与理论对比（%1$s）</string>
+    <string name="solid_theory_disp_fmt">墙顶侧移：有限元 %1$s ／ 理论 %2$s（误差 %3$s%%）</string>
+    <string name="solid_theory_bend_fmt">墙根弯曲：有限元 %1$s ／ 理论 %2$s（误差 %3$s%%）</string>
+    <string name="solid_theory_converged">有限元与梁理论接近，说明网格加密后的变形/应力已收敛。</string>
+    <string name="solid_advice_title">加强建议</string>
+    <string name="solid_narrative_title">分析过程</string>
+    <string name="solid_assumptions_title">计算假定</string>
+
+    <!-- ============ 激活页 ============ -->
+    <string name="activation_title">邀请码激活</string>
+    <string name="activation_desc">输入开发者提供的邀请码即可开通云端 AI 建模。一个邀请码对应一台设备，每日次数由邀请码决定。</string>
+    <string name="activation_activated">已激活</string>
+    <string name="activation_daily_fmt">每日可用 %1$d 次 AI 调用</string>
+    <string name="activation_manual_key">当前使用手动配置的 API Key</string>
+    <string name="activation_device_id_fmt">设备 ID：%1$s</string>
+    <string name="activation_not_generated">未生成</string>
+    <string name="activation_credential_fmt">当前凭据：%1$s</string>
+    <string name="activation_cleared">已清除凭据，可重新输入邀请码</string>
+    <string name="activation_clear_btn">清除凭据 / 重新激活</string>
+    <string name="activation_server_addr">服务地址</string>
+    <string name="activation_invite_code">邀请码</string>
+    <string name="activation_generating">生成中…</string>
+    <string name="activation_local_device_id_fmt">本机设备 ID：%1$s</string>
+    <string name="activation_success_fmt">激活成功，今日可用 %1$d 次</string>
+    <string name="activation_restore_btn">恢复上次邀请码激活</string>
+    <string name="activation_restored">已恢复上次邀请码激活的凭据（无需重新联网激活）</string>
+    <string name="activation_device_taken_fmt">该设备已激活过，服务端不允许重复激活。请让管理员在后台删除设备 %1$s 后重试，或使用上次保存的 app_token。</string>
+    <string name="activation_failed_default">激活失败，请稍后重试</string>
+    <string name="activation_reactivate">重新激活</string>
+    <string name="activation_activate">激活</string>
+    <string name="activation_admin_note">邀请码由管理员在服务端 /admin/invites 生成</string>
+
+    <!-- ============ Frame 预览补充 ============ -->
+    <string name="frame_regen_hint">你觉得这个简化模型哪里不合理？写下来让 AI 重新建模。 例如：\"人体应该是均布载荷不是集中力\"、\"3030 铝型材应按空心截面算\"。</string>
+    <string name="frame_regen_placeholder">比如：载荷位置不对，人体应按均布载荷处理…</string>
+    <string name="frame_holes_prefix">，开孔 </string>
+    <string name="frame_hole_rect">矩形洞</string>
+    <string name="frame_hole_circle">圆孔</string>
+    <string name="frame_hole_fmt">%1$s φ%2$s@%3$s</string>
+    <string name="frame_section_pipe">（圆管）</string>
+    <string name="frame_section_solid_round">（实心圆）</string>
+    <string name="frame_section_hollow">（空心）</string>
+    <string name="frame_member_fmt">杆件 %1$d：%2$s %3$s</string>
+    <string name="frame_member_strong_axis">（h 竖直强轴）</string>
+    <string name="frame_member_nodes_fmt">（节点 %1$d → %2$d）</string>
+    <string name="frame_support_node_fmt">节点%1$d（%2$s）</string>
+
+    <!-- ============ Frame 结果补充 ============ -->
+    <string name="frame_model_default_name">框架模型</string>
+    <string name="frame_saved_message">已保存到我的项目</string>
+    <string name="frame_save_failed_fmt">保存失败：%1$s</string>
+    <string name="frame_pdf_saved_fmt">PDF 已保存到下载目录：%1$s</string>
+    <string name="frame_pdf_generated_fmt">PDF 已生成：%1$s</string>
+    <string name="frame_export_failed_fmt">导出失败：%1$s</string>
+    <string name="frame_saving">保存中…</string>
+    <string name="frame_save_to_projects">保存到我的项目</string>
+    <string name="frame_exporting">导出中…</string>
+    <string name="frame_member_default">杆件</string>
+    <string name="frame_thermal_member_fmt">杆%1$s %2$s°C</string>
+    <string name="frame_member_title_fmt">杆件 %1$d · %2$s %3$s</string>
+    <string name="frame_detail_stress_fmt">应力 %1$s</string>
+    <string name="frame_detail_vm_stress_fmt">冯·米塞斯应力 %1$s</string>
+    <string name="frame_detail_util_fmt"> · 利用率 %1$s%%</string>
+    <string name="frame_detail_axial_fmt"> · 轴力 %1$s（%2$s）</string>
+    <string name="frame_detail_my_fmt"> · My %1$s</string>
+    <string name="frame_detail_mz_fmt"> · Mz %1$s</string>
+    <string name="frame_detail_torsion_fmt"> · 扭矩 %1$s</string>
+    <string name="frame_detail_max_moment_fmt"> · 最大弯矩 %1$s</string>
+    <string name="frame_detail_compression_fmt"> · 压力 %1$s</string>
+    <string name="frame_detail_delta_t_fmt"> · ΔT %1$s°C</string>
+    <string name="frame_analysis_default_name">框架分析</string>
+
+    <!-- ============ 渗流预览 ============ -->
+    <string name="seepage_preview_title">渗流模型预览</string>
+    <string name="seepage_running">正在求解渗流…</string>
+    <string name="seepage_preview_desc">把问题简化成「混凝土重力坝 + 透水坝基」：下方是坝体截面与上下游水位，确认后开始坝基渗流求解与稳定性校核。</string>
+    <string name="seepage_default_name">大坝渗流</string>
+    <string name="seepage_schematic_note">示意图（按比例）：灰色为坝体，蓝色为上下游水体，下方为透水坝基。</string>
+    <string name="seepage_info_title">模型信息</string>
+    <string name="seepage_dim_fmt">坝体：高 %1$s × 坝顶宽 %2$s，坝底宽约 %3$s</string>
+    <string name="seepage_slope_fmt">坝坡：上游 %1$s、下游 %2$s</string>
+    <string name="seepage_water_level_fmt">水位：上游 %1$s、下游 %2$s（以坝基底面为基准）</string>
+    <string name="seepage_permeability_fmt">，坝基渗透系数 %1$s</string>
+    <string name="seepage_compute_content">计算内容：二维稳态渗流有限元（水头场/渗流线）+ 抗滑/抗倾覆/抗管涌校核</string>
+    <string name="seepage_slope_vertical">直立（1:0）</string>
+    <string name="seepage_slope_ratio_fmt">1:%1$s</string>
+    <string name="seepage_dam_height_fmt">坝高 %1$s</string>
+    <string name="seepage_upstream_fmt">上游 %1$s</string>
+    <string name="seepage_downstream_fmt">下游 %1$s</string>
+    <string name="seepage_permeable_foundation">透水坝基</string>
+
+    <!-- ============ 渗流结果 ============ -->
+    <string name="seepage_result_title">大坝渗流结果</string>
+    <string name="seepage_verdict_danger">危险：坝基渗流可能失稳</string>
+    <string name="seepage_verdict_caution">注意：渗流接近失稳</string>
+    <string name="seepage_safety_summary_fmt">渗流综合安全系数 %1$s（抗滑 %2$s / 抗倾覆 %3$s / 抗管涌 %4$s）</string>
+    <string name="seepage_weak_part_fmt">最薄弱部位：%1$s</string>
+    <string name="seepage_critical_level_fmt">临界上游水位：超过 %1$s 时，%2$s将控制失稳。</string>
+    <string name="seepage_metric_seepage">单宽渗漏</string>
+    <string name="seepage_permeability_footer_fmt">渗透系数 %1$s</string>
+    <string name="seepage_metric_uplift">坝底扬压力</string>
+    <string name="seepage_uplift_ratio_fmt">占自重 %1$s%%</string>
+    <string name="seepage_metric_safety">渗流安全系数</string>
+    <string name="seepage_field_title">渗流场：水头云图与渗流线</string>
+    <string name="seepage_head_min_fmt">%1$s（下游低水头）</string>
+    <string name="seepage_head_max_fmt">%1$s（上游高水头）</string>
+    <string name="seepage_uplift_exit_fmt">坝底扬压力 %1$s，坝趾出逸比降 %2$s（允许 %3$s）。</string>
+    <string name="seepage_field_explain">水头从上游向下游递减，云图显示坝基各处剩余水头；深色曲线为渗流流线，流线越密、出口处越集中，管涌风险越大。</string>
+    <string name="seepage_checks_title">稳定性校核</string>
+    <string name="seepage_check_item_fmt">%1$s：安全系数 %2$s</string>
+    <string name="seepage_check_force_resist_fmt">作用 %1$s %2$s ／ 抗力 %3$s %2$s</string>
+    <string name="seepage_dam_weight_fmt">坝体自重 %1$s，坝高 %2$s、坝底宽 %3$s。</string>
+    <string name="seepage_advice_title">加强建议</string>
+    <string name="seepage_bullet_fmt">· %1$s</string>
+    <string name="seepage_assumptions_title">计算假定</string>
+    <string name="seepage_mesh_info_fmt">材料 %1$s（密度 %2$s）· 网格求解耗时 %3$s ms</string>
+
+    <!-- ============ 时间历程预览 ============ -->
+    <string name="transient_all_members">全部杆件</string>
+    <string name="transient_members_prefix">杆件 </string>
+    <string name="transient_preview_title">时间历程预览</string>
+    <string name="transient_running">正在逐时刻求解…</string>
+    <string name="transient_preview_desc">把问题简化成「恒定载荷 + 温度随时间循环」的平面框架：每个时刻按当时的温度求解一次，找出最危险的那一刻。确认后开始计算。</string>
+    <string name="transient_default_name">温度历程分析</string>
+    <string name="transient_profile_note_fmt">横轴为时间（共 %1$s，%2$d 个时刻）：温度从 %3$s°C 升到 %4$s°C 再回到 %5$s°C。</string>
+    <string name="transient_frame_default_name">框架结构</string>
+    <string name="transient_schematic_note">示意图（按比例）：灰点为节点，橙色为参与温度变化的杆件，底部方块为支座。</string>
+    <string name="transient_info_title">模型信息</string>
+    <string name="transient_structure_fmt">结构：%1$d 个节点、%2$d 根杆件、%3$d 处支座</string>
+    <string name="transient_dead_load_fmt">恒载：%1$s</string>
+    <string name="transient_temp_profile_fmt">温度历程：%1$s，%2$s，%3$d 个时间步</string>
+    <string name="transient_thermal_members_fmt">参与温度变化：%1$s</string>
+    <string name="transient_compute_content">计算内容：逐时刻替换温度载荷求解（准静态热-力），输出应力/变形/安全系数随时间的变化</string>
+    <string name="transient_load_udl_fmt">杆件 %1$s 均布 %2$s%3$s</string>
+    <string name="transient_load_force_fmt">节点 %1$s 集中力 %2$s</string>
+    <string name="transient_dir_up">（向上）</string>
+    <string name="transient_dir_down">（向下）</string>
+    <string name="transient_duration_hours_fmt">%.1f 小时</string>
+    <string name="transient_duration_minutes_fmt">%.0f 分钟</string>
+    <string name="transient_duration_seconds_fmt">%.0f 秒</string>
+    <string name="transient_profile_sine">正弦（平滑升温再降温）</string>
+    <string name="transient_profile_triangle">三角（匀速升温再降温）</string>
+    <string name="transient_peak_label_fmt">%1$s°C（峰值）</string>
+    <string name="transient_time_label">时间</string>
+
+    <!-- ============ 时间历程结果 ============ -->
+    <string name="transient_result_title">温度历程结果</string>
+    <string name="transient_verdict_danger">温度循环过程中结构不安全</string>
+    <string name="transient_verdict_caution">温度循环过程中需提高警惕</string>
+    <string name="transient_worst_fmt">最不利时刻：%1$s，温度 %2$s°C，应力 %3$s，安全系数 %4$s。</string>
+    <string name="transient_advice">建议：加大薄弱杆件截面、降低温差、或让端部可以自由伸缩（释放温度约束），也可改用耐温更好的材料。</string>
+    <string name="transient_metric_worst_stress">最不利应力</string>
+    <string name="transient_metric_footer_fmt">%1$s · %2$s°C</string>
+    <string name="transient_metric_min_safety">最低安全系数</string>
+    <string name="transient_over_temp_title">温度超出材料长期耐温</string>
+    <string name="transient_over_temp_peak_fmt">峰值 %1$s°C</string>
+    <string name="transient_over_temp_limit_fmt">，%1$s的长期耐温约 %2$s°C</string>
+    <string name="transient_over_temp_warn">。高温下材料强度与刚度会明显下降，本结果未折减，请更换耐温材料或降低峰值温度。</string>
+    <string name="transient_thermal_members_default">参与杆件</string>
+    <string name="transient_curves_title">随时间变化</string>
+    <string name="transient_legend_temp">温度 °C</string>
+    <string name="transient_legend_stress">最大应力</string>
+    <string name="transient_legend_disp">最大变形 %1$s</string>
+    <string name="transient_current_moment_fmt">当前时刻：%1$s · 温度 %2$s°C · ΔT %3$s°C · 热伸长 %4$s</string>
+    <string name="transient_slider_hint_fmt">拖动选择时刻（共 %1$d 个时刻，%2$s）</string>
+    <string name="transient_static_note">本结构为静定结构：均匀温度变化只引起自由伸缩，不产生温度应力，因此各时刻应力与安全系数基本不变（热伸长量随温度变化）。</string>
+    <string name="transient_metric_selected_stress">该时刻应力</string>
+    <string name="transient_metric_selected_disp">该时刻变形</string>
+    <string name="transient_metric_selected_safety">该时刻安全</string>
+    <string name="transient_deform_title_fmt">%1$s 的变形（放大 %2$d×）</string>
+    <string name="transient_deform_note">灰色虚线为原始形状，彩色实线为变形形状（按杆件应力着色）</string>
+    <string name="transient_members_title_fmt">%1$s 杆件受力</string>
+    <string name="transient_member_delta_t_fmt">ΔT %1$s°C</string>
+    <string name="transient_member_stress_fmt"> · 应力 %1$s</string>
+    <string name="transient_member_util_fmt"> · 利用率 %1$s%%</string>
+    <string name="transient_member_axial_fmt"> · 轴力 %1$s</string>
+    <string name="transient_member_moment_fmt"> · 弯矩 %1$s</string>
+    <string name="transient_info_fmt">%1$d 个时刻 × %2$d 根杆件，温度历程 %3$s</string>
+
+    <!-- ============ 通用三维实体预览 ============ -->
+    <string name="solid_generic_regen_hint">哪里不对就让 AI 重新建模，例如：\"钢管应水平放置、两端简支\"、\"中部有 10 mm 通孔，应按净截面校核\"、\"荷载应竖直向下\"。</string>
+    <string name="solid_generic_regen_placeholder">比如：模型方向不对，管子是水平的…</string>
+    <string name="solid_generic_preview_desc">把问题简化成「一块受约束的三维实体」：用四面体有限元计算内部的位移与应力分布，能看到应力集中、受压破坏与变形量。确认后开始网格划分与求解。</string>
+    <string name="solid_generic_default_name">三维实体</string>
+    <string name="solid_generic_schematic_note">示意图（按比例）：灰色为实体，斜线为约束面，箭头为载荷方向。</string>
+    <string name="solid_generic_geometry_fmt">几何：%1$s</string>
+    <string name="solid_generic_material_fmt">材料：%1$s%2$s</string>
+    <string name="solid_generic_supports_fmt">约束（%1$d）：%2$s</string>
+    <string name="solid_generic_loads_fmt">载荷（%1$d）：%2$s</string>
+    <string name="solid_generic_compute_content">计算内容：四节点四面体有限元（位移/应力场）+ 拉/压强度校核</string>
+    <string name="solid_generic_note">说明：实体网格按实心图元生成，不含开孔、倒角等细节。杆件/型材上需要开孔（孔边应力）时，请用「空间结构」梁元模式重建。</string>
+    <string name="solid_generic_mat_e_prefix">E </string>
+    <string name="solid_generic_mat_nu_prefix">ν </string>
+    <string name="solid_generic_mat_density_prefix">密度 </string>
+    <string name="solid_generic_paren_open">（</string>
+    <string name="solid_generic_comma">，</string>
+    <string name="solid_generic_paren_close">）</string>
+    <string name="solid_generic_geom_cylinder_fmt">圆柱 半径 %1$s × 高 %2$s</string>
+    <string name="solid_generic_geom_plate_fmt">板 长 %1$s × 宽 %2$s × 厚 %3$s</string>
+    <string name="solid_generic_geom_box_fmt">长方体 长 %1$s × 高 %2$s × 厚 %3$s</string>
+    <string name="solid_generic_none">无</string>
+    <string name="solid_generic_support_all_fixed">全固定</string>
+    <string name="solid_generic_support_plane_fmt">%1$s=%2$s 面（%3$s）</string>
+    <string name="solid_generic_support_point_fmt">点(%1$s)（%2$s）</string>
+    <string name="solid_generic_support_outline_fmt">%1$s=%2$s 面轮廓/四边（%3$s）</string>
+    <string name="solid_generic_face_min">最小面</string>
+    <string name="solid_generic_face_max">最大面</string>
+    <string name="solid_generic_separator">；</string>
+    <string name="solid_generic_load_hydro_fmt">静水/土压 %1$s=%2$s，底部 %3$s → 顶部 0</string>
+    <string name="solid_generic_load_pressure_fmt">面压 %1$s=%2$s，%3$s</string>
+    <string name="solid_generic_load_gravity_dir_fmt">自重 方向[%1$s]</string>
+    <string name="solid_generic_load_gravity_default_fmt">自重（默认沿 -%1$s 向下）</string>
+    <string name="solid_generic_load_force_fmt">集中力 [%1$s] %2$s</string>
+    <string name="solid_generic_load_wind_fmt">风速 %1$s m/s → 代码换算风压</string>
+    <string name="solid_generic_load_beaufort_fmt">%1$s 级风 → 代码换算风压</string>
+    <string name="solid_generic_load_massarea_fmt">质量 %1$s kg / 面积 %2$s m² → 代码换算压强</string>
+    <string name="solid_generic_fluid_water">水</string>
+    <string name="solid_generic_fluid_soil">土</string>
+    <string name="solid_generic_load_depth_fmt">%1$s深 %2$s m → 代码按 ρgh 换算静水压力</string>
+    <string name="solid_generic_load_dir_out">（向外/吸）</string>
+    <string name="solid_generic_load_dir_in">（向内/压）</string>
+    <string name="solid_generic_load_massforce_fmt">质量 %1$s kg → 代码换算为力，方向 [%2$s]</string>
+    <string name="solid_generic_dim_diameter_fmt">直径 %1$s</string>
+    <string name="solid_generic_dim_width_fmt">宽 %1$s</string>
+    <string name="solid_generic_mesh_warn_heavy">当前为细网格（fine/ultra），四面体单元数量较多，求解可能耗时十几秒甚至更久，并占用较多内存。若手机性能一般或只想快速估算，建议改用 medium 或 coarse 网格。</string>
+    <string name="solid_generic_mesh_warn_normal">三维实体（TET4）采用四面体有限元，计算量明显大于梁元。实体尺寸大或选细网格时，求解可能耗时数秒到十几秒；如遇卡顿，可改用更粗的网格档位。</string>
+
+    <!-- ============ 通用三维实体结果 ============ -->
+    <string name="solid_generic_result_title">三维实体结果</string>
+    <string name="solid_generic_modify_btn">修改模型</string>
+    <string name="solid_generic_verdict_danger">危险：接近或超过材料强度极限</string>
+    <string name="solid_generic_verdict_caution">注意：接近承载力极限</string>
+    <string name="solid_generic_safety_fmt">综合安全系数 %1$s（拉 %2$s / 压 %3$s）</string>
+    <string name="solid_generic_stress_disp_fmt">最大 von Mises 应力 %1$s，最大位移 %2$s。</string>
+    <string name="solid_generic_metric_disp">最大位移</string>
+    <string name="solid_generic_disp_node_fmt">节点 %1$s</string>
+    <string name="solid_generic_stress_footer_fmt">拉 %1$s / 压 %2$s</string>
+    <string name="solid_generic_checks_title">工程校核</string>
+    <string name="solid_generic_reactions_title">支反力</string>
+    <string name="solid_generic_reactions_fmt">Fx = %1$s，Fy = %2$s，Fz = %3$s</string>
+    <string name="solid_generic_weight_fmt">实体自重 %1$s（体积 %2$s）。</string>
+    <string name="solid_generic_mesh_info_fmt">材料 %1$s（E %2$s，ν %3$s）· 网格 %4$d 个四面体 / %5$d 节点 · 自由度 %6$d · 求解 %7$s ms（%8$s）</string>
+
+    <!-- ============ 流体结果 ============ -->
+    <string name="flow_result_title">风荷载结果</string>
+    <string name="flow_verdict_danger">危险：这堵墙可能被吹倒</string>
+    <string name="flow_verdict_caution">注意：大风下墙体接近失稳</string>
+    <string name="flow_safety_summary_fmt">抗风综合安全系数 %1$s（抗倾覆 %2$s / 抗滑移 %3$s / 墙根抗弯 %4$s）</string>
+    <string name="flow_critical_speed_fmt">临界风级：风速超过 %1$s（约 %2$s 级风）时，%3$s安全系数会降到 1.0 以下。</string>
+    <string name="flow_metric_wind_speed">来流风速</string>
+    <string name="flow_wind_footer_fmt">%1$s · %2$s</string>
+    <string name="flow_metric_total_force">总风荷载</string>
+    <string name="flow_force_per_m_fmt">每米 %1$s</string>
+    <string name="flow_metric_safety">抗风安全系数</string>
+    <string name="flow_field_title">流场：压力云图与流线</string>
+    <string name="flow_pressure_min_fmt">%1$s（吸力）</string>
+    <string name="flow_pressure_max_fmt">%1$s（迎风压力）</string>
+    <string name="flow_stagnation_fmt">迎风面驻点压力 %1$s（理论 ½ρU² = %2$s）；墙顶气流加速到来流的 %3$s 倍。</string>
+    <string name="flow_potential_note_fmt">无粘势流不能模拟背风侧漩涡，云图按 ±动压限幅；结构风荷载另按规范体型系数 %1$s 取值。</string>
+    <string name="flow_wall_weight_fmt">墙体自重 %1$s，墙高 %2$s、厚 %3$s、长 %4$s。</string>
+    <string name="flow_mesh_info_fmt">材料 %1$s（密度 %2$s）· 网格求解耗时 %3$s ms</string>
+    <string name="common_enum_sep">、</string>
+
+    <!-- ============ 薄壁容器（水箱/料仓，shell_vessel） ============ -->
+    <string name="home_mode_shell">薄壁容器</string>
+    <string name="home_mode_shell_hint">水箱 / 水槽 / 料仓 / 储罐 / 筒仓等充液装料容器，壳单元计算罐壁/仓壁在填料内压与自重下的应力与变形；载荷按填料自动生成</string>
+    <string name="home_mode_buried_pipe">埋地管</string>
+    <string name="home_mode_buried_pipe_hint">埋在土里的管道（排水管、给水管、穿线管、波纹管等）在覆土土压与地面车载下的变形与安全性，工程公式法估算，不跑 FEM</string>
+    <string name="home_example_cat_shell">薄壁结构</string>
+    <string-array name="home_examples_shell">
+        <item>长 2 米、宽 1 米、高 1.5 米的钢制矩形水箱，壁厚 6 毫米，装 1.2 米深的水，罐壁会不会鼓胀变形？</item>
+        <item>一只玻璃杯，直径 10 厘米、高 20 厘米、壁厚 3 毫米，倒入 100°C 的沸水后立刻放进 0°C 的冰箱，杯壁会不会因温度应力而炸裂？</item>
+    </string-array>
+    <string-array name="home_examples_shell_imperial">
+        <item>A rectangular steel water tank 6 ft long, 3 ft wide, 5 ft tall, wall 1/4 in thick, filled to 4 ft with water — will the walls bulge?</item>
+        <item>A glass cup 4 in in diameter and 8 in tall, wall 1/8 in thick, filled with boiling water (212°F) and placed straight into a 32°F fridge — will the wall crack from thermal stress?</item>
+    </string-array>
+    <string name="home_example_cat_buried">埋地管</string>
+    <string-array name="home_examples_buried">
+        <item>一根直径 50 毫米、壁厚 3 毫米的 PVC 塑料管，埋在 2 米深的土中，上面有车辆经过，会不会损坏？</item>
+    </string-array>
+    <string-array name="home_examples_buried_imperial">
+        <item>A PVC plastic pipe 50 mm in diameter and 3 mm thick, buried 2 m deep in soil, with vehicles passing overhead — will it be damaged?</item>
+    </string-array>
+    <string name="shell_preview_title">薄壁容器预览</string>
+    <string name="shell_preview_desc">把问题简化成「等壁厚、平底的薄壁容器」：用四节点壳单元（MITC4）计算罐壁/仓壁在填料内压与自重下的位移与应力分布，能看到壁面鼓胀与底部转角应力集中。载荷（静水压/散体侧压/自重）由求解器按填料自动生成，确认后开始求解。</string>
+    <string name="shell_default_name">薄壁容器</string>
+    <string name="shell_result_title">薄壁容器结果</string>
+
+    <!-- ============ 埋地管（shell_buried_pipe，工程公式法） ============ -->
+    <string name="buried_pipe_result_title">埋地管校核结果</string>
+    <string name="buried_pipe_default_name">埋地管验算</string>
+    <string name="buried_pipe_back">返回</string>
+    <string name="buried_pipe_modify">修改模型</string>
+    <string name="buried_pipe_save">保存项目</string>
+    <string name="buried_pipe_solve_failed">求解失败</string>
+    <string name="buried_pipe_verdict_fmt">结论：%1$s</string>
+    <string name="buried_pipe_verdict_safe">安全</string>
+    <string name="buried_pipe_verdict_caution">需关注</string>
+    <string name="buried_pipe_verdict_unsafe">不安全</string>
+    <string name="buried_pipe_basis_note">工程公式法估算 · 线弹性 · 偏保守，不替代正式设计</string>
+    <string name="buried_pipe_ring_title">变形后椭圆环（虚线为原始圆，挠度已放大显示）</string>
+    <string name="buried_pipe_amp_fmt">放大倍数 ×%1$s</string>
+    <string name="buried_pipe_dim_fmt">管径 %1$s mm · 埋深 %2$s m</string>
+    <string name="buried_pipe_metric_dy">竖向挠度 Δy</string>
+    <string name="buried_pipe_metric_dratio">挠度比 Δ/D</string>
+    <string name="buried_pipe_metric_stress">最大环向应力</string>
+    <string name="buried_pipe_metric_sratio">应力比 σ/[σ]</string>
+    <string name="buried_pipe_metric_pcr">屈曲临界荷载 p_cr</string>
+    <string name="buried_pipe_metric_bsf">屈曲安全系数</string>
+    <string name="buried_pipe_metric_psoil">覆土竖向压力</string>
+    <string name="buried_pipe_metric_plive">地面车载附加压力</string>
+    <string name="buried_pipe_metric_plat">侧向土压力</string>
+    <string name="buried_pipe_metric_pint">管内压</string>
+    <string name="buried_pipe_checks_title">校核项</string>
+    <string name="buried_pipe_params_title">计算参数</string>
+    <string name="buried_pipe_param_material">材料</string>
+    <string name="buried_pipe_param_material_fmt">%1$s（E=%2$s MPa，ν=%3$s，强度=%4$s MPa）</string>
+    <string name="buried_pipe_param_dim">管径 / 壁厚</string>
+    <string name="buried_pipe_param_cover">覆土深度 / 管内压</string>
+    <string name="buried_pipe_param_soil">土重度 / 内摩擦角 / 黏聚力</string>
+    <string name="buried_pipe_param_wheel">单轮车载 / 轮胎接地</string>
+    <string name="buried_pipe_formulas_title">公式与假设</string>
+    <string name="buried_pipe_formulas_used">采用公式：</string>
+    <string name="buried_pipe_assumptions_title">默认值与假设（未提供的参数按默认值兜底）：</string>
+    <string name="buried_pipe_advice_title">建议</string>
+    <string name="buried_pipe_disclaimer">本结果为工程公式估算，忽略土弹簧与覆土约束的有利作用，偏保守；实际工程应结合规范与现场勘察进行正式设计。</string>
+    <string name="shell_geom_rect_fmt">矩形水箱 长 %1$s × 宽 %2$s × 高 %3$s</string>
+    <string name="shell_geom_circle_fmt">圆柱料仓 直径 %1$s × 高 %2$s</string>
+    <string name="shell_thickness_fmt">，壁厚 %1$s m</string>
+    <string name="shell_fill_fmt">填料：%1$s</string>
+    <string name="shell_fill_default">水（默认）</string>
+    <string name="shell_fill_custom">自定义填料</string>
+    <string name="shell_fill_depth_fmt">填料深度 %1$s m</string>
+    <string name="shell_compute_content">计算内容：四节点壳单元（MITC4）位移/应力场 + 拉/压强度校核；载荷按填料自动生成（静水压/散体侧压/底板反力/自重）</string>
+    <string name="shell_preview_note">说明：壳单元适用于等壁厚、平底、竖直放置的容器，底板与壁面刚接（转角处会显示应力集中）；不含顶盖、开孔、加劲肋、锥斗等细节。</string>
+    <string name="shell_mesh_hint">薄壁容器（MITC4 壳单元）计算量大于梁元。容器尺寸大或选细网格时，求解可能耗时数秒到十几秒；如遇卡顿可改用更粗的网格档位。</string>
+    <string name="shell_mesh_warn_heavy">当前为细网格（fine/ultra），壳单元数量较多，求解可能耗时十几秒甚至更久，并占用较多内存。若手机性能一般或只想快速估算，建议改用 medium 或 coarse 网格。</string>
+    <string name="shell_running">正在求解薄壁容器…</string>
+    <string name="shell_regen_hint">哪里不对就让 AI 重新建模，例如：\"水箱壁厚应是 8 毫米\"、\"料仓装的是湿砂不是干砂\"、\"水深只有 1 米，不是装满\"。</string>
+    <string name="shell_weight_fmt">容器自重 %1$s（容积 %2$s）。</string>
+    <string name="shell_mesh_info_fmt">材料 %1$s（E %2$s，ν %3$s）· 网格 %4$d 个壳单元 / %5$d 节点 · 自由度 %6$d · 求解 %7$s ms（%8$s）</string>
+
+    <!-- ============ AI 结构优化建议（Frame / SolidGeneric，第一期） ============ -->
+    <string name="settings_optimize_header">AI 结构优化方案</string>
+    <string name="settings_optimize_count">优化方案数量</string>
+    <string name="settings_optimize_count_hint">仅当结果为「注意」或「危险」时，结果页才出现优化入口；方案越多，AI 调用与重算耗时越长。</string>
+    <string name="settings_optimize_count_fmt">%1$d 个</string>
+    <string name="optimize_button">AI 优化方案</string>
+    <string name="optimize_title">AI 优化方案</string>
+    <string name="optimize_back">返回</string>
+    <string name="optimize_analyzing">正在诊断问题并生成优化方案…</string>
+    <string name="optimize_verifying">正在做有限元验证…</string>
+    <string name="optimize_diagnosis_header">问题诊断</string>
+    <string name="optimize_scheme_header">优化方案</string>
+    <string name="optimize_expected">预期效果</string>
+    <string name="optimize_changes">改动内容</string>
+    <string name="optimize_figure_title">优化效果图（拟物化示意）</string>
+    <string name="optimize_figure_hint">单指拖动旋转，双指捏合缩放</string>
+    <string name="optimize_reset_view">重置视角</string>
+    <string name="optimize_legend_original">原结构</string>
+    <string name="optimize_highlight_new">新增</string>
+    <string name="optimize_highlight_mod">修改</string>
+    <string name="optimize_metric_header">优化前后对比</string>
+    <string name="optimize_metric_before">优化前</string>
+    <string name="optimize_metric_after">优化后</string>
+    <string name="optimize_metric_better">改善</string>
+    <string name="optimize_metric_worse">变差</string>
+    <string name="optimize_metric_excl_singular">特征应力已排除应力奇点区域</string>
+    <string name="optimize_safe_after">优化后已达安全（安全系数 ≥ 2.0）</string>
+    <string name="optimize_still_unsafe">优化后仍未达安全，建议咨询专业工程师</string>
+    <string name="optimize_no_change">该方案未改变结构，无法产生效果图</string>
+    <string name="optimize_cheat_warning">该方案改动了载荷或放松了原有约束，不作为有效优化</string>
+    <string name="optimize_unverified_fmt">该方案未通过有限元验证：%1$s</string>
+    <string name="optimize_retry">重新生成</string>
+    <string name="optimize_export_png">导出效果图 PNG</string>
+    <string name="optimize_export_done_fmt">已保存到：%1$s</string>
+    <string name="optimize_export_failed_fmt">导出失败：%1$s</string>
+    <string name="optimize_disclaimer">AI 辅助建议，仅供参考，不能替代正规工程验算；涉及人身或结构安全请咨询注册结构工程师。</string>
+    <string name="optimize_no_suggestion">AI 未返回可用的优化方案，请重试。</string>
+    <string name="optimize_solution_fmt">方案 %1$d</string>
+    <string name="optimize_not_offered">当前结果已处于安全区间，无需优化方案。</string>
+    <!-- v1.2.35 英文模式中文泄漏修复补充键 -->
+    <string name="frame_stability_hint">\n\n可返回上一页选择其他候选方案，或点「修改模型」补充斜撑、加强支座约束，使结构几何不变后再计算。</string>
+    <string name="solid_generic_label_selfweight">自重</string>
+    <string name="home_collapse">收起</string>
+    <string name="home_expand">展开</string>
+</resources>

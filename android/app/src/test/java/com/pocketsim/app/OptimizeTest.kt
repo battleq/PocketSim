@@ -1,0 +1,298 @@
+package com.pocketsim.app
+
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * AI 优化建议（第一期 Frame / SolidGeneric）纯逻辑单测：
+ * 入口门控、AI 回复解析与模型校验、模型差异 diff、指标对比、会话验证闭环。
+ */
+class OptimizeTest {
+
+    private val baseModel = """
+        {"name":"两层书架","dim":2,
+         "nodes":[{"id":1,"x":0,"y":0},{"id":2,"x":800,"y":0},
+                  {"id":3,"x":0,"y":1500},{"id":4,"x":800,"y":1500},{"id":5,"x":400,"y":1500}],
+         "members":[{"id":1,"i":1,"j":2,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":2,"i":1,"j":3,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":3,"i":2,"j":4,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":4,"i":3,"j":5,"width_b":30,"depth_h":40,"material":"松木"}],
+         "supports":[{"node":1,"type":"fixed"},{"node":2,"type":"fixed"}],
+         "loads":[{"type":"force","node":5,"fx":0,"fy":-294},
+                  {"type":"udl","member":1,"qy":-0.3}]}
+    """.trimIndent()
+
+    /** 新增一根斜撑（5→1）并加大 1 号杆截面 */
+    private val optimizedModel = """
+        {"name":"两层书架","dim":2,
+         "nodes":[{"id":1,"x":0,"y":0},{"id":2,"x":800,"y":0},
+                  {"id":3,"x":0,"y":1500},{"id":4,"x":800,"y":1500},{"id":5,"x":400,"y":1500}],
+         "members":[{"id":1,"i":1,"j":2,"width_b":40,"depth_h":50,"material":"松木"},
+                    {"id":2,"i":1,"j":3,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":3,"i":2,"j":4,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":4,"i":3,"j":5,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":5,"i":5,"j":1,"width_b":30,"depth_h":40,"material":"松木"}],
+         "supports":[{"node":1,"type":"fixed"},{"node":2,"type":"fixed"}],
+         "loads":[{"type":"force","node":5,"fx":0,"fy":-294},
+                  {"type":"udl","member":1,"qy":-0.3}]}
+    """.trimIndent()
+
+    private fun frame(json: String): FrameModel =
+        AppJson.decodeFromString(FrameModel.serializer(), json)
+
+    // ------------------------------------------------------------------
+    // 门控：只有注意/危险才提示优化
+    // ------------------------------------------------------------------
+    @Test
+    fun `OptimizeGate 安全与未知不提供建议`() {
+        assertFalse(OptimizeGate.shouldOffer(SafetyLogic.Grade.SAFE))
+        assertFalse(OptimizeGate.shouldOffer(SafetyLogic.Grade.UNKNOWN))
+    }
+
+    @Test
+    fun `OptimizeGate 注意与危险提供建议`() {
+        assertTrue(OptimizeGate.shouldOffer(SafetyLogic.Grade.CAUTION))
+        assertTrue(OptimizeGate.shouldOffer(SafetyLogic.Grade.DANGER))
+    }
+
+    // ------------------------------------------------------------------
+    // diff：新增 / 修改 / 载荷与约束防作弊
+    // ------------------------------------------------------------------
+    @Test
+    fun `diffFrame 识别新增杆件与截面修改`() {
+        val diff = OptimizeDiff.diffFrame(frame(baseModel), frame(optimizedModel))
+        assertTrue(diff.addedMemberIds.contains(5))
+        assertTrue(diff.modifiedMemberIds.contains(1))
+        assertFalse(diff.loadOrSupportChanged)
+        assertTrue(diff.changes.any { it.kind == ChangeKind.ADDED })
+        assertTrue(diff.changes.any { it.detail.contains("40") && it.detail.contains("50") })
+    }
+
+    @Test
+    fun `diffFrame 载荷被改动判定为不合规优化`() {
+        val changedLoad = baseModel.replace("\"fy\":-294", "\"fy\":-100")
+        val diff = OptimizeDiff.diffFrame(frame(baseModel), frame(changedLoad))
+        assertTrue(diff.loadOrSupportChanged)
+    }
+
+    @Test
+    fun `diffFrame 删除原有约束判定为不合规优化`() {
+        val relaxed = baseModel.replace("\"supports\":[{\"node\":1,\"type\":\"fixed\"},{\"node\":2,\"type\":\"fixed\"}]",
+            "\"supports\":[{\"node\":1,\"type\":\"fixed\"}]")
+        val diff = OptimizeDiff.diffFrame(frame(baseModel), frame(relaxed))
+        assertTrue(diff.loadOrSupportChanged)
+    }
+
+    @Test
+    fun `diffFrame 未改动结构时差异为空`() {
+        val diff = OptimizeDiff.diffFrame(frame(baseModel), frame(baseModel))
+        assertTrue(diff.isEmpty)
+        assertFalse(diff.loadOrSupportChanged)
+    }
+
+    /**
+     * 增设中柱：横杆 1-2 被节点 6 拆成 7/8 两段（编号全新），中柱为 9。
+     * 期望：横杆段判「修改（拆分）」而不是新增；只有中柱 #9 判新增。
+     */
+    private val splitModel = """
+        {"name":"增设中柱","dim":2,
+         "nodes":[{"id":1,"x":0,"y":0},{"id":2,"x":800,"y":0},
+                  {"id":3,"x":0,"y":1500},{"id":4,"x":800,"y":1500},{"id":5,"x":400,"y":1500},
+                  {"id":6,"x":400,"y":0},{"id":7,"x":400,"y":1500}],
+         "members":[{"id":7,"i":1,"j":6,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":8,"i":6,"j":2,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":2,"i":1,"j":3,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":3,"i":2,"j":4,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":4,"i":3,"j":5,"width_b":30,"depth_h":40,"material":"松木"},
+                    {"id":9,"i":6,"j":7,"width_b":30,"depth_h":40,"material":"松木"}],
+         "supports":[{"node":1,"type":"fixed"},{"node":2,"type":"fixed"}],
+         "loads":[{"type":"force","node":5,"fx":0,"fy":-294},
+                  {"type":"udl","member":1,"qy":-0.3}]}
+    """.trimIndent()
+
+    @Test
+    fun `diffFrame 拆分横杆判为修改而不是新增`() {
+        val diff = OptimizeDiff.diffFrame(frame(baseModel), frame(splitModel))
+        assertFalse(diff.addedMemberIds.contains(7))
+        assertFalse(diff.addedMemberIds.contains(8))
+        assertTrue(diff.modifiedMemberIds.contains(7))
+        assertTrue(diff.modifiedMemberIds.contains(8))
+        assertEquals(setOf(9), diff.addedMemberIds)
+        assertTrue(diff.changes.any { it.kind == ChangeKind.MODIFIED && it.label.contains("拆分") })
+        assertFalse(diff.loadOrSupportChanged)
+    }
+
+    @Test
+    fun `diffFrame 复用旧编号但几何不同判为新增`() {
+        // 4 号杆件由 3→5 改为 4→5（几何换掉一部分），不能因为 id 没变就当成"修改"
+        val moved = baseModel.replace("{\"id\":4,\"i\":3,\"j\":5", "{\"id\":4,\"i\":4,\"j\":5")
+        val diff = OptimizeDiff.diffFrame(frame(baseModel), frame(moved))
+        assertTrue(diff.addedMemberIds.contains(4))
+        assertFalse(diff.modifiedMemberIds.contains(4))
+        assertTrue(diff.changes.any { it.kind == ChangeKind.REMOVED && it.label.contains("#4") })
+    }
+
+    @Test
+    fun `diffFrame 坐标微差在容差内不算新增`() {
+        // 节点 2 平移 0.2 mm（< 0.5 mm 容差），不应产生任何差异
+        val nudged = baseModel.replace("\"x\":800,\"y\":0}", "\"x\":800.2,\"y\":0}")
+        val diff = OptimizeDiff.diffFrame(frame(baseModel), frame(nudged))
+        assertTrue(diff.addedMemberIds.isEmpty())
+        assertTrue(diff.modifiedMemberIds.isEmpty())
+        assertTrue(diff.isEmpty)
+    }
+
+    // ------------------------------------------------------------------
+    // 指标对比
+    // ------------------------------------------------------------------
+    @Test
+    fun `OptimizeCompare 安全系数提升且位移下降判为改善`() {
+        val before = OptimizeMetrics(safetyFactor = 1.1, maxDispMm = 8.0, signatureStressMPa = 90.0)
+        val after = OptimizeMetrics(safetyFactor = 2.4, maxDispMm = 4.0, signatureStressMPa = 55.0)
+        val deltas = OptimizeCompare.deltas(before, after)
+        assertEquals(3, deltas.size)
+        assertTrue(deltas[0].better)
+        assertTrue(deltas[1].better)
+        assertTrue(deltas[2].better)
+        assertTrue(OptimizeCompare.isSafeAfter(after))
+    }
+
+    @Test
+    fun `OptimizeCompare 安全系数下降判为变差`() {
+        val before = OptimizeMetrics(safetyFactor = 2.5)
+        val after = OptimizeMetrics(safetyFactor = 1.8)
+        assertFalse(OptimizeCompare.deltas(before, after)[0].better)
+        assertFalse(OptimizeCompare.isSafeAfter(after))
+    }
+
+    // ------------------------------------------------------------------
+    // AI 回复解析 + 模型校验
+    // ------------------------------------------------------------------
+    private fun replyJson(model: String, n: Int = 1): String = buildString {
+        append("""{"ready":true,"diagnosis":"支座处弯矩过大","suggestions":[""")
+        repeat(n) { i ->
+            if (i > 0) append(',')
+            append("""{"title":"新增斜撑$i","desc":"在自由端加斜撑","expected":"挠度下降","changes":["新增杆件"],"model":""")
+            append(model)
+            append('}')
+        }
+        append("""],"disclaimer":"AI 辅助建议，不能替代正规工程验算"}""")
+    }
+
+    @Test
+    fun `parseOptimize 合法方案通过并规范化模型`() {
+        val reply = AiParser.parseOptimize(replyJson(optimizedModel), OptimizeKind.FRAME)
+        assertEquals(1, reply.suggestions.size)
+        assertNotNull(reply.suggestions[0].modelJson)
+        assertTrue(reply.diagnosis.isNotBlank())
+    }
+
+    @Test
+    fun `parseOptimize 非法模型全部被拒时抛异常`() {
+        assertThrows(AiParseException::class.java) {
+            AiParser.parseOptimize(
+                """{"ready":true,"diagnosis":"x","suggestions":[{"title":"坏方案","model":{"name":"x","nodes":123}}],"disclaimer":""}""",
+                OptimizeKind.FRAME
+            )
+        }
+    }
+
+    @Test
+    fun `parseOptimize 无suggestions返回空列表`() {
+        val reply = AiParser.parseOptimize(
+            """{"ready":true,"diagnosis":"无方案","suggestions":[],"disclaimer":""}""",
+            OptimizeKind.FRAME
+        )
+        assertTrue(reply.suggestions.isEmpty())
+    }
+
+    // ------------------------------------------------------------------
+    // 会话闭环：AI → 校验 → 有限元验证 → 差异
+    // ------------------------------------------------------------------
+    @Test
+    fun `OptimizeSession 方案验证成功并产出差异`() = runTest {
+        val base = frame(baseModel)
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), base),
+            summary = "安全系数 1.1，危险",
+            before = OptimizeMetrics(safetyFactor = 1.1, maxDispMm = 8.0)
+        )
+        val session = OptimizeSession(
+            aiClientProvider = { FakeAiClient(listOf(replyJson(optimizedModel))) },
+            target = target,
+            suggestionCount = 1,
+            verifier = {
+                VerificationResult(
+                    ok = true,
+                    afterModelJson = it.modelJson!!,
+                    afterMetrics = OptimizeMetrics(safetyFactor = 2.4, maxDispMm = 4.0)
+                )
+            }
+        )
+        session.run()
+        val done = session.state.value as OptimizeState.Done
+        assertEquals(1, done.verified.size)
+        assertTrue(done.verified[0].verified)
+        assertTrue(done.verified[0].diff.addedMemberIds.contains(5))
+        assertEquals(2.4, done.verified[0].after.safetyFactor)
+    }
+
+    @Test
+    fun `OptimizeSession 验证失败时标记未通过`() = runTest {
+        val base = frame(baseModel)
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), base),
+            summary = "危险",
+            before = OptimizeMetrics(safetyFactor = 1.0)
+        )
+        val session = OptimizeSession(
+            aiClientProvider = { FakeAiClient(listOf(replyJson(optimizedModel))) },
+            target = target,
+            suggestionCount = 1,
+            verifier = { VerificationResult(ok = false, failureReason = "求解不收敛") }
+        )
+        session.run()
+        val done = session.state.value as OptimizeState.Done
+        assertFalse(done.verified[0].verified)
+        assertEquals("求解不收敛", done.verified[0].failureReason)
+    }
+
+    @Test
+    fun `OptimizeSession AI回复不可解析时进入失败态`() = runTest {
+        val session = OptimizeSession(
+            aiClientProvider = { FakeAiClient(listOf("抱歉我无法给出结构化结果")) },
+            target = OptimizeTarget(
+                kind = OptimizeKind.FRAME,
+                modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
+                summary = "危险",
+                before = OptimizeMetrics(safetyFactor = 1.0)
+            ),
+            suggestionCount = 1,
+            verifier = { error("不应被调用") }
+        )
+        session.run()
+        assertTrue(session.state.value is OptimizeState.Failed)
+    }
+
+    @Test
+    fun `OptimizeSession 方案数量限制在1到3`() {
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
+            summary = "x"
+        )
+        assertEquals(3, OptimizeSession({ FakeAiClient(emptyList()) }, target, 9) {
+            VerificationResult(false)
+        }.count)
+        assertEquals(1, OptimizeSession({ FakeAiClient(emptyList()) }, target, 0) {
+            VerificationResult(false)
+        }.count)
+    }
+}
