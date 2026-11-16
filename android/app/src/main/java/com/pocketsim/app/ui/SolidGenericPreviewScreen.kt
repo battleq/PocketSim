@@ -56,12 +56,15 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pocketsim.app.AppContainer
 import com.pocketsim.app.AppSettings
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.R
 import com.pocketsim.app.SolidGenericGeometryInput
 import com.pocketsim.app.SolidGenericLoad
@@ -69,6 +72,7 @@ import com.pocketsim.app.SolidGenericModel
 import com.pocketsim.app.SolidGenericResult
 import com.pocketsim.app.SolidGenericSupport
 import com.pocketsim.app.Units
+import com.pocketsim.app.materialDisplayName
 import kotlinx.coroutines.launch
 
 /**
@@ -93,6 +97,7 @@ fun SolidGenericPreviewScreen(
     var regenFeedback by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val unknownError = stringResource(R.string.error_unknown_default)
+    val english = LocaleManager.currentLanguageCode(LocalContext.current) == LocaleStore.LANG_EN
 
     // 网格档位：AI 未指定时按设置页的"默认网格档位"预选，用户也可在预览页直接改
     val settings by container.settingsRepository.settings.collectAsState(initial = AppSettings())
@@ -281,7 +286,7 @@ fun SolidGenericPreviewScreen(
                         val unspecified = stringResource(R.string.unspecified)
                         Text(
                             text = stringResource(R.string.solid_generic_material_fmt,
-                                model.material.ifBlank { unspecified },
+                                materialDisplayName(model.material, english).ifBlank { unspecified },
                                 genericMaterialText(model)
                             ),
                             style = MaterialTheme.typography.bodySmall

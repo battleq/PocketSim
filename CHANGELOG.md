@@ -2,6 +2,11 @@
 
 English version: [CHANGELOG.md](CHANGELOG.md) · 中文版：[CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md). Downloads: [GitHub Releases](https://github.com/battleq/PocketSim/releases).
 
+## v1.2.36 (2026-11-17)
+
+- Fix: material names no longer leak Chinese into the English UI. Built-in library materials are displayed in English (e.g. Pine, Low-carbon steel, I-beam 20a) in the AI optimization change list, the model candidate cards and every preview/result screen; custom or web-looked-up names outside the mapping are shown as-is.
+- Fix: the AI optimization before/after metric table (Safety factor / Max displacement / Signature stress) is now fully localized, and the optimization prompt requires every AI text field to be in English when the UI language is English.
+
 ## v1.2.35 (2026-11-16)
 
 - Fix: several places still showed Chinese in the English UI — the 3D solid preview's constraint/load descriptions (min/max face, wind/hydrostatic conversions), the AI optimization "Changes" list (member modifications), and the Settings Kimi reasoning-effort section. All are now localized to English.

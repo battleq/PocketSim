@@ -6,8 +6,7 @@ PocketSim is a free Android finite element analysis (FEA) app with an [open-sour
 
 [Download APK](https://github.com/battleq/PocketSim/releases) · [中文说明](README.zh-CN.md) · [Report an issue](https://github.com/battleq/PocketSim/issues)
 
-<!-- Hero GIF placeholder: replace with docs/images/hero.gif after recording (photo -> AI model -> solve -> stress contour, 10-15 s, < 5 MB) -->
-> 🎬 *Demo GIF coming soon: photo → AI model → solve → stress contour.*
+![PocketSim demo: photo → AI model → solve → stress contour](docs/images/hero.gif)
 
 [![Release](https://img.shields.io/github/v/release/battleq/PocketSim)](https://github.com/battleq/PocketSim/releases)
 [![Stars](https://img.shields.io/github/stars/battleq/PocketSim?style=social)](https://github.com/battleq/PocketSim)
@@ -37,9 +36,9 @@ Everyday problems need risk awareness, not certified precision. PocketSim uses c
 2. **AI builds the model.** Geometry, material lookup and loads are filled in. You review them before anything is solved.
 3. **The phone solves it locally** with scikit-fem inside an embedded Python 3.10 (Chaquopy). You get deflection, a stress contour and a safety verdict.
 
-| Preview | Result |
+| Describe | Result |
 |---|---|
-| ![Frame preview](screenshots/03_frame_preview.png) | ![Stress result](screenshots/04_frame_result.png) |
+| ![Describe the part](screenshots/03_frame_describe.png) | ![Stress result](screenshots/04_frame_result.png) |
 
 ## Use Cases
 
@@ -65,12 +64,13 @@ Each example below ships with the app. Tap it on the home screen to fill in the 
 
 | | |
 |---|---|
-| ![Home and examples](screenshots/02_home_examples.png) | **Home & examples**: start from a built-in example or describe your own part. |
-| ![Member forces](screenshots/05_frame_members.png) | **Member forces**: axial, shear and moment for every member. |
-| ![Follow-up](screenshots/06_frame_followup.png) | **Continue asking / edit & recompute**: change one parameter and recompute without rebuilding the model. |
-| ![3D preview](screenshots/07_frame_3d_preview.png) | **3D preview**: inspect the model in space, with pinch-zoom and rotation. |
-| ![3D result](screenshots/08_frame_3d_result.png) | **3D result**: deflection and stress shown on the 3D structure. |
-| ![AI optimization](screenshots/09_optimize.png) | **AI optimization advice**: before/after 3D figure, changes marked with numbered callouts (#7–#9) tied to the change list. |
+| ![Home and examples](screenshots/05_home_examples.png) | **Home & examples**: start from a built-in example or describe your own part. |
+| ![3D preview](screenshots/06_3d_preview.png) | **3D preview**: inspect the model in space, with pinch-zoom and rotation. |
+| ![3D result](screenshots/07_3d_result.png) | **3D result**: deflection and stress shown on the 3D structure. |
+| ![AI optimization advice](screenshots/08_ai_optimization_advice.png) | **AI optimization advice**: suggested structural changes, with a before/after 3D figure and numbered callouts tied to the change list. |
+| ![AI optimization result](screenshots/09_ai_optimization_result.png) | **AI optimization result**: the optimized model re-solved, with before/after displacement and stress compared side by side. |
+| ![PDF report](screenshots/10_pdf_report.png) | **PDF report**: one-tap analysis report with the model, assumptions, contour plots and the safety verdict. |
+| ![Settings](screenshots/11_settings.png) | **Settings**: bring-your-own-key provider setup, language, units and reasoning effort. |
 
 ## Features
 

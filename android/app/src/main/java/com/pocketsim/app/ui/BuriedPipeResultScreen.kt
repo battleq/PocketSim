@@ -54,9 +54,12 @@ import com.pocketsim.app.AppContainer
 import com.pocketsim.app.AppJson
 import com.pocketsim.app.BuriedPipeRender
 import com.pocketsim.app.BuriedPipeResult
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.R
 import com.pocketsim.app.SavedProject
 import com.pocketsim.app.ShellBuriedPipeModel
+import com.pocketsim.app.materialDisplayName
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
@@ -209,6 +212,7 @@ private fun BuriedPipeBody(
 ) {
     val theme = verdictTheme(r.verdict)
     val m = r.metrics
+    val english = LocaleManager.currentLanguageCode(LocalContext.current) == LocaleStore.LANG_EN
     val verdictText = when (r.verdict) {
         "safe" -> stringResource(R.string.buried_pipe_verdict_safe)
         "caution" -> stringResource(R.string.buried_pipe_verdict_caution)
@@ -326,7 +330,7 @@ private fun BuriedPipeBody(
                         modifier = Modifier.padding(bottom = 6.dp))
                     ParamLine(stringResource(R.string.buried_pipe_param_material),
                         stringResource(R.string.buried_pipe_param_material_fmt,
-                            m["material"]?.content ?: model.material,
+                            materialDisplayName(m["material"]?.content ?: model.material, english),
                             m.num("E_MPa").f(0), m.num("nu").f(3), m.num("strength_MPa").f(1)))
                     ParamLine(stringResource(R.string.buried_pipe_param_dim), "${m.num("outer_diameter_mm").f(1)} mm / ${m.num("thickness_mm").f(2)} mm")
                     ParamLine(stringResource(R.string.buried_pipe_param_cover), "${m.num("cover_depth_m").f(2)} m / ${m.num("internal_pressure_kPa").f(1)} kPa")

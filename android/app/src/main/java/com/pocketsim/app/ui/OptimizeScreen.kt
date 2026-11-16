@@ -93,6 +93,7 @@ fun OptimizeScreen(
     val exportDoneTpl = stringResource(R.string.optimize_export_done_fmt)
     val exportFailedTpl = stringResource(R.string.optimize_export_failed_fmt)
     val language = LocaleManager.currentLanguageCode(context)
+    val english = language == LocaleStore.LANG_EN
     val settings by container.settingsRepository.settings.collectAsState(initial = null)
     var reload by remember { mutableStateOf(0) }
 
@@ -179,6 +180,7 @@ fun OptimizeScreen(
                         VerifiedCard(
                             index = index + 1,
                             item = item,
+                            english = english,
                             labels = FigureLabels(
                                 title = stringResource(R.string.optimize_figure_title),
                                 // 图内只留标题；"B 级拟物化示意图"等说明文字不上图（用户要求）
@@ -231,6 +233,7 @@ private fun SectionTitle(text: String) {
 private fun VerifiedCard(
     index: Int,
     item: VerifiedOptimization,
+    english: Boolean,
     labels: FigureLabels,
     onExport: (Bitmap) -> Unit
 ) {
@@ -238,7 +241,7 @@ private fun VerifiedCard(
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
                 text = stringResource(R.string.optimize_solution_fmt, index) +
-                    "：" + item.suggestion.title,
+                    stringResource(R.string.optimize_label_sep) + item.suggestion.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -249,7 +252,8 @@ private fun VerifiedCard(
             if (item.suggestion.expected.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.optimize_expected) + "：" + item.suggestion.expected,
+                    text = stringResource(R.string.optimize_expected) +
+                        stringResource(R.string.optimize_label_sep) + item.suggestion.expected,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -263,7 +267,7 @@ private fun VerifiedCard(
                 )
                 item.diff.changes.forEach { ch ->
                     Text(
-                        text = "· ${ch.label}" + if (ch.detail.isNotBlank()) "：${ch.detail}" else "",
+                        text = "· ${ch.label}" + if (ch.detail.isNotBlank()) stringResource(R.string.optimize_label_sep) + ch.detail else "",
                         style = MaterialTheme.typography.bodySmall,
                         color = when (ch.kind) {
                             ChangeKind.ADDED -> MaterialTheme.colorScheme.primary
@@ -365,7 +369,7 @@ private fun VerifiedCard(
                 style = MaterialTheme.typography.labelLarge
             )
             Spacer(Modifier.height(4.dp))
-            val deltas = OptimizeCompare.deltas(item.before, item.after)
+            val deltas = OptimizeCompare.deltas(item.before, item.after, english)
             MetricsTable(deltas)
 
             if (item.after.stressExcludesSingularity) {

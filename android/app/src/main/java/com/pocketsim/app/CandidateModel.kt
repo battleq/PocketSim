@@ -83,6 +83,35 @@ sealed interface ModelCandidate {
 internal fun modelDisplayName(raw: String): String =
     if (raw == "框架模型" || raw == "温度历程分析") "" else raw
 
+/**
+ * 材料名展示翻译：材料库以中文名为键（求解器、LLM 契约、模型 JSON 均存中文名），
+ * 英文界面在展示层把内置材料名映射为英文；映射外的自定义/联网检索材料原样显示。
+ * 只影响展示文案，不改动任何存储数据。
+ */
+internal fun materialDisplayName(raw: String, english: Boolean): String {
+    if (!english || raw.isBlank()) return raw
+    when (raw) {
+        "低碳钢" -> return "Low-carbon steel"
+        "不锈钢304" -> return "Stainless steel 304"
+        "不锈钢316" -> return "Stainless steel 316"
+        "铝合金" -> return "Aluminum alloy"
+        "松木" -> return "Pine"
+        "竹材" -> return "Bamboo"
+        "胶合板" -> return "Plywood"
+        "密度板" -> return "MDF"
+        "混凝土C20" -> return "Concrete C20"
+        "钢筋混凝土C30" -> return "Reinforced concrete C30"
+        "砖砌体" -> return "Brick masonry"
+        "石膏板" -> return "Gypsum board"
+        "玻璃" -> return "Glass"
+    }
+    if (raw.startsWith("工字钢")) return "I-beam " + raw.removePrefix("工字钢")
+    if (raw.startsWith("角钢")) return "Angle " + raw.removePrefix("角钢")
+    if (raw.startsWith("欧标") && raw.endsWith("铝型材"))
+        return "EU ${raw.removePrefix("欧标").removeSuffix("铝型材")} aluminum profile"
+    return raw
+}
+
 /** 候选概要文案生成：每张卡片一行，突出规模与关键参数，便于横向对比。 */
 internal object CandidateSummary {
     private fun t(english: Boolean, zh: String, en: String): String = if (english) en else zh
@@ -101,7 +130,7 @@ internal object CandidateSummary {
     fun flow(m: FlowModel, english: Boolean = false): String = buildString {
         append(modelDisplayName(m.name).ifBlank { t(english, "风墙", "Wind wall") })
         append(" · ${fmt(m.wall.length_m)}×${fmt(m.wall.height_m)}×${fmt(m.wall.thickness_m)}m")
-        if (m.material.isNotBlank()) append(" · ${m.material}")
+        if (m.material.isNotBlank()) append(" · ${materialDisplayName(m.material, english)}")
         val wind = m.wind_speed_m_s?.let { "${fmt(it)}m/s" }
             ?: m.beaufort?.let { if (english) "wind force $it" else "${it}级风" }
         if (wind != null) append(" · $wind")
@@ -115,7 +144,7 @@ internal object CandidateSummary {
         append(" · ")
         append(if (english) "water ${fmt(m.upstream_level_m)}→${fmt(m.downstream_level_m)} m"
         else "水位${fmt(m.upstream_level_m)}→${fmt(m.downstream_level_m)}m")
-        if (m.material.isNotBlank()) append(" · ${m.material}")
+        if (m.material.isNotBlank()) append(" · ${materialDisplayName(m.material, english)}")
     }
 
     fun transient(s: TransientSpec, english: Boolean = false): String = buildString {
@@ -129,7 +158,7 @@ internal object CandidateSummary {
     fun solid(m: SolidWallModel, english: Boolean = false): String = buildString {
         append(modelDisplayName(m.name).ifBlank { t(english, "三维墙体", "3D wall") })
         append(" · ${fmt(m.wall.length_m)}×${fmt(m.wall.height_m)}×${fmt(m.wall.thickness_m)}m")
-        if (m.material.isNotBlank()) append(" · ${m.material}")
+        if (m.material.isNotBlank()) append(" · ${materialDisplayName(m.material, english)}")
         val wind = m.pressure_Pa?.let { "${fmt(it)}Pa" } ?: m.wind_speed_m_s?.let { "${fmt(it)}m/s" }
             ?: m.beaufort?.let { if (english) "wind force $it" else "${it}级风" }
         if (wind != null) append(" · $wind")
@@ -146,7 +175,7 @@ internal object CandidateSummary {
             m.geometry.radius_m?.let { if (english) "R ${fmt(it)}" else "半径${fmt(it)}" }
         )
         if (dims.isNotEmpty()) append(" · " + dims.joinToString(" "))
-        if (m.material.isNotBlank()) append(" · ${m.material}")
+        if (m.material.isNotBlank()) append(" · ${materialDisplayName(m.material, english)}")
     }
 
     fun shell(m: ShellVesselModel, english: Boolean = false): String = buildString {
@@ -160,7 +189,7 @@ internal object CandidateSummary {
             m.geometry.radius_m?.let { if (english) "R ${fmt(it)}" else "半径${fmt(it)}" }
         )
         if (dims.isNotEmpty()) append(" · " + dims.joinToString(" "))
-        if (m.material.isNotBlank()) append(" · ${m.material}")
+        if (m.material.isNotBlank()) append(" · ${materialDisplayName(m.material, english)}")
     }
 
     /** 整数显示为整数，否则保留两位小数（避免 2.0000001 这种噪声）。 */

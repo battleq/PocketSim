@@ -6,8 +6,7 @@ PocketSim 是一款免费的安卓有限元分析（FEA）应用，[求解引擎
 
 [下载 APK](https://github.com/battleq/PocketSim/releases) · [English](README.md) · [问题反馈](https://github.com/battleq/PocketSim/issues)
 
-<!-- Hero GIF 占位：录制后替换为 docs/images/hero.gif（拍照 → AI 建模 → 求解 → 应力云图，10–15 秒，小于 5 MB） -->
-> 🎬 *演示动图即将补充：拍照 → AI 建模 → 求解 → 应力云图。*
+![PocketSim 演示：拍照 → AI 建模 → 求解 → 应力云图](docs/images/hero.gif)
 
 [![Release](https://img.shields.io/github/v/release/battleq/PocketSim)](https://github.com/battleq/PocketSim/releases)
 [![Stars](https://img.shields.io/github/stars/battleq/PocketSim?style=social)](https://github.com/battleq/PocketSim)
@@ -37,9 +36,9 @@ PocketSim 是一款免费的安卓有限元分析（FEA）应用，[求解引擎
 2. **AI 建模**：补全几何、查询材料、设置载荷。求解前你可以检查并确认。
 3. **手机本地求解**：基于 scikit-fem，运行在内嵌的 Python 3.10（Chaquopy）中，给出变形、应力云图与安全判定。
 
-| 预览 | 结果 |
+| 描述 | 结果 |
 |---|---|
-| ![框架预览](screenshots/03_frame_preview.png) | ![应力结果](screenshots/04_frame_result.png) |
+| ![描述构件](screenshots/03_frame_describe.png) | ![应力结果](screenshots/04_frame_result.png) |
 
 ## 应用场景
 
@@ -65,12 +64,13 @@ PocketSim 是一款免费的安卓有限元分析（FEA）应用，[求解引擎
 
 | | |
 |---|---|
-| ![首页与示例](screenshots/02_home_examples.png) | **首页与示例**：从内置示例开始，或描述你自己的构件。 |
-| ![杆件内力](screenshots/05_frame_members.png) | **杆件内力**：每根杆件的轴力、剪力与弯矩。 |
-| ![继续追问](screenshots/06_frame_followup.png) | **继续追问/修改重算**：改一个参数即可重算，无需重画模型。 |
-| ![三维预览](screenshots/07_frame_3d_preview.png) | **三维预览**：在空间中检查模型。 |
-| ![三维结果](screenshots/08_frame_3d_result.png) | **三维结果**：在三维结构上查看变形与应力。 |
-| ![AI 优化方案](screenshots/09_optimize.png) | **AI 优化方案**：前后对比三维效果图，改动处以编号（#7–#9）与改动清单一一对应。 |
+| ![首页与示例](screenshots/05_home_examples.png) | **首页与示例**：从内置示例开始，或描述你自己的构件。 |
+| ![三维预览](screenshots/06_3d_preview.png) | **三维预览**：在空间中检查模型，支持双指缩放与旋转。 |
+| ![三维结果](screenshots/07_3d_result.png) | **三维结果**：在三维结构上查看变形与应力云图。 |
+| ![AI 优化建议](screenshots/08_ai_optimization_advice.png) | **AI 优化建议**：给出结构优化方案，前后对比三维图与编号改动清单一一对应。 |
+| ![AI 优化结果](screenshots/09_ai_optimization_result.png) | **AI 优化结果**：优化后模型重算，改进前后的位移与应力指标并列对比。 |
+| ![PDF 报告](screenshots/10_pdf_report.png) | **PDF 报告**：一键导出分析报告，含模型、假设、云图与安全判定。 |
+| ![设置](screenshots/11_settings.png) | **设置**：配置自带密钥的模型服务商、语言、单位与推理强度。 |
 
 ## 功能概览
 

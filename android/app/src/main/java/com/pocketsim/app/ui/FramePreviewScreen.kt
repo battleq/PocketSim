@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,9 +55,12 @@ import com.pocketsim.app.AppContainer
 import com.pocketsim.app.FrameLoad
 import com.pocketsim.app.FrameModel
 import com.pocketsim.app.FrameResult
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.R
 import com.pocketsim.app.Units
 import com.pocketsim.app.modelDisplayName
+import com.pocketsim.app.materialDisplayName
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -85,6 +89,7 @@ fun FramePreviewScreen(
     var regenFeedback by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val unknownError = stringResource(R.string.error_unknown_default)
+    val english = LocaleManager.currentLanguageCode(LocalContext.current) == LocaleStore.LANG_EN
 
     if (showRegenDialog) {
         AlertDialog(
@@ -280,7 +285,7 @@ fun FramePreviewScreen(
                                 }
                             }
                             Text(
-                                text = memberFmt.format(m.id, m.material, section) +
+                                text = memberFmt.format(m.id, materialDisplayName(m.material, english), section) +
                                     (if (model.dim == 3) strongAxis else "") +
                                     nodesFmt.format(m.i, m.j),
                                 style = MaterialTheme.typography.bodySmall
@@ -306,6 +311,7 @@ fun FramePreviewScreen(
 /** 模型信息卡：规模 / 材料 / 支座 / 载荷 */
 @Composable
 private fun FrameSummaryCard(model: FrameModel) {
+    val english = LocaleManager.currentLanguageCode(LocalContext.current) == LocaleStore.LANG_EN
     // stringResource 只能在组合上下文调用：标签先取出，joinToString 的普通 lambda 里只做拼接
     val fixedLabel = stringResource(R.string.frame_support_fixed)
     val pinnedLabel = stringResource(R.string.frame_support_pinned)
@@ -315,7 +321,7 @@ private fun FrameSummaryCard(model: FrameModel) {
         "roller", "roller_x", "roller_y" -> rollerLabel
         else -> pinnedLabel
     }
-    val materials = model.members.map { it.material }.filter { it.isNotBlank() }.distinct().joinToString("、")
+    val materials = model.members.map { materialDisplayName(it.material, english) }.filter { it.isNotBlank() }.distinct().joinToString(if (english) ", " else "、")
     val supportNodeFmt = stringResource(R.string.frame_support_node_fmt)
     val supportsDesc = model.supports.joinToString("、") { supportNodeFmt.format(it.node, supportLabel(it.type)) }
     val loadsSb = StringBuilder()

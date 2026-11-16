@@ -808,6 +808,7 @@
     <string name="optimize_diagnosis_header">Diagnosis</string>
     <string name="optimize_scheme_header">Optimization option</string>
     <string name="optimize_expected">Expected effect</string>
+    <string name="optimize_label_sep">" — "</string>
     <string name="optimize_changes">Changes</string>
     <string name="optimize_figure_title">Optimized structure (stylized schematic)</string>
     <string name="optimize_figure_hint">Drag with one finger to rotate, pinch with two to zoom</string>

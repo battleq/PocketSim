@@ -64,10 +64,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pocketsim.app.AppContainer
 import com.pocketsim.app.AppSettings
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.R
 import com.pocketsim.app.SolidResult
 import com.pocketsim.app.SolidWallModel
 import com.pocketsim.app.Units
+import com.pocketsim.app.materialDisplayName
 import kotlinx.coroutines.launch
 
 /**
@@ -91,6 +94,7 @@ fun SolidPreviewScreen(
     var regenFeedback by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val english = LocaleManager.currentLanguageCode(context) == LocaleStore.LANG_EN
 
     // 网格档位：AI 未指定时按设置页的"默认网格档位"预选，用户也可在预览页直接改
     val settings by container.settingsRepository.settings.collectAsState(initial = AppSettings())
@@ -281,7 +285,7 @@ fun SolidPreviewScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = stringResource(R.string.solid_material_fmt, model.material.ifBlank { stringResource(R.string.unspecified) }) + solidMaterialText(context, model),
+                            text = stringResource(R.string.solid_material_fmt, materialDisplayName(model.material, english).ifBlank { stringResource(R.string.unspecified) }) + solidMaterialText(context, model),
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(

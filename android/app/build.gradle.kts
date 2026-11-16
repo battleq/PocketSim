@@ -21,8 +21,8 @@ android {
         applicationId = "com.pocketsim.app"
         minSdk = 26          // Chaquopy 17 要求 ≥24；26 起可直接用自适应图标且覆盖 97%+ 设备
         targetSdk = 34
-        versionCode = 83
-        versionName = "1.2.35"
+        versionCode = 84
+        versionName = "1.2.36"
 
         // Chaquopy：Python 解释器为原生组件，必须显式声明 ABI。
         // v0.1.1 起仅保留 arm64-v8a（覆盖几乎所有真机；体积约省一半）。

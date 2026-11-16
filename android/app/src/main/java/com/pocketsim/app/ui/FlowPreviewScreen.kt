@@ -52,8 +52,11 @@ import androidx.compose.ui.unit.sp
 import com.pocketsim.app.AppContainer
 import com.pocketsim.app.FlowModel
 import com.pocketsim.app.FlowResult
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.R
 import com.pocketsim.app.Units
+import com.pocketsim.app.materialDisplayName
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
@@ -76,6 +79,7 @@ fun FlowPreviewScreen(
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val english = LocaleManager.currentLanguageCode(context) == LocaleStore.LANG_EN
 
     Scaffold(
         topBar = {
@@ -202,7 +206,7 @@ fun FlowPreviewScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = stringResource(R.string.flow_material_fmt, model.material.ifBlank { stringResource(R.string.unspecified) }),
+                            text = stringResource(R.string.flow_material_fmt, materialDisplayName(model.material, english).ifBlank { stringResource(R.string.unspecified) }),
                             style = MaterialTheme.typography.bodySmall
                         )
                         val windText = when {

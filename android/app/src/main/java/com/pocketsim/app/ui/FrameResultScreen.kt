@@ -57,11 +57,14 @@ import com.pocketsim.app.AppJson
 import com.pocketsim.app.FrameModel
 import com.pocketsim.app.FramePolyline
 import com.pocketsim.app.FrameResult
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.OptimizeGate
 import com.pocketsim.app.R
 import com.pocketsim.app.SafetyLogic
 import com.pocketsim.app.Units
 import com.pocketsim.app.modelDisplayName
+import com.pocketsim.app.materialDisplayName
 import com.pocketsim.app.SavedProject
 import com.pocketsim.app.ui.components.ColorLegend
 import com.pocketsim.app.ui.components.ColorRamp
@@ -97,6 +100,7 @@ fun FrameResultScreen(
     onGoHome: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val english = LocaleManager.currentLanguageCode(context) == LocaleStore.LANG_EN
     val scope = rememberCoroutineScope()
     var deformScale by remember { mutableStateOf(20f) }
     var exporting by remember { mutableStateOf(false) }
@@ -346,7 +350,7 @@ fun FrameResultScreen(
                                         text = stringResource(
                                             R.string.verdict_banner_weak_fmt,
                                             m.id, mm?.i ?: 0, mm?.j ?: 0,
-                                            m.material.ifBlank { memberDefault }, m.section,
+                                            materialDisplayName(m.material, english).ifBlank { memberDefault }, m.section,
                                             stringResource(form),
                                             Units.stress(m.sigma_MPa).toString(),
                                             Units.stress(strength).toString(),
@@ -645,6 +649,7 @@ private fun sectionDim(b: Double, h: Double): String =
 /** 杆件受力明细卡：每根杆件的截面/应力/利用率/轴力/弯矩（节点连接取自原始模型） */
 @Composable
 private fun FrameMembersCard(model: FrameModel, result: FrameResult) {
+    val english = LocaleManager.currentLanguageCode(LocalContext.current) == LocaleStore.LANG_EN
     val tensionLabel = stringResource(R.string.frame_member_tension)
     val compressionLabel = stringResource(R.string.frame_member_compression)
     val memberTitleFmt = stringResource(R.string.frame_member_title_fmt)
@@ -676,7 +681,7 @@ private fun FrameMembersCard(model: FrameModel, result: FrameResult) {
                     val conn = model.members.firstOrNull { it.id == m.id }
                         ?.let { memberNodesFmt.format(it.i, it.j) }.orEmpty()
                     Text(
-                        text = memberTitleFmt.format(m.id, m.material, m.section) + conn,
+                        text = memberTitleFmt.format(m.id, materialDisplayName(m.material, english), m.section) + conn,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )

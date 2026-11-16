@@ -218,10 +218,11 @@ object OptimizeDiff {
                 if (english) " (solid round)" else "（实心圆）",
                 if (english) " (hollow)" else "（空心）"
             )
+            val mat = materialDisplayName(a.material, english)
             changes += ModelChange(
                 ChangeKind.ADDED,
                 t(english, "新增杆件 #${a.id}（节点 ${a.i}→${a.j}）", "Add member #${a.id} (nodes ${a.i}→${a.j})"),
-                t(english, "截面 $sec，材料 ${a.material}", "Section $sec, material ${a.material}")
+                t(english, "截面 $sec，材料 $mat", "Section $sec, material $mat")
             )
         }
 
@@ -304,7 +305,10 @@ object OptimizeDiff {
         dimChange(t(english, "半径", "Radius"), b.radius_m, a.radius_m)?.let { changes += it }
 
         if (!before.material.equals(after.material, true)) {
-            changes += ModelChange(ChangeKind.MODIFIED, t(english, "材料", "Material"), "${before.material} → ${after.material}")
+            changes += ModelChange(
+                ChangeKind.MODIFIED, t(english, "材料", "Material"),
+                "${materialDisplayName(before.material, english)} → ${materialDisplayName(after.material, english)}"
+            )
         }
         if (before.eMPa != after.eMPa || before.nu != after.nu) {
             changes += ModelChange(
@@ -371,7 +375,11 @@ object OptimizeDiff {
             if (b.depth_h != a.depth_h) parts += t(english, "高 ${b.depth_h} → ${a.depth_h} mm", "Height ${b.depth_h} → ${a.depth_h} mm")
         }
         if (b.wall_t != a.wall_t) parts += t(english, "壁厚 ${b.wall_t} → ${a.wall_t} mm", "Wall ${b.wall_t} → ${a.wall_t} mm")
-        if (!b.material.equals(a.material, true)) parts += t(english, "材料 ${b.material} → ${a.material}", "Material ${b.material} → ${a.material}")
+        if (!b.material.equals(a.material, true)) parts += t(
+            english,
+            "材料 ${b.material} → ${a.material}",
+            "Material ${materialDisplayName(b.material, english)} → ${materialDisplayName(a.material, english)}"
+        )
         if (reportConnection && (b.i != a.i || b.j != a.j))
             parts += t(english, "连接 ${b.i}→${b.j} 改为 ${a.i}→${a.j}", "Connection ${b.i}→${b.j} changed to ${a.i}→${a.j}")
         return if (parts.isEmpty()) null else parts.joinToString(if (english) "; " else "；")
@@ -433,11 +441,11 @@ object OptimizeCompare {
      * 三项指标对比。
      * 安全系数越大越好；位移、特征应力越小越好。
      */
-    fun deltas(before: OptimizeMetrics, after: OptimizeMetrics): List<MetricDelta> = listOf(
-        delta("安全系数", before.safetyFactor, after.safetyFactor, higherBetter = true, digits = 2, unit = ""),
-        delta("最大位移", before.maxDispMm, after.maxDispMm, higherBetter = false, digits = 2, unit = " mm"),
+    fun deltas(before: OptimizeMetrics, after: OptimizeMetrics, english: Boolean = false): List<MetricDelta> = listOf(
+        delta(if (english) "Safety factor" else "安全系数", before.safetyFactor, after.safetyFactor, higherBetter = true, digits = 2, unit = ""),
+        delta(if (english) "Max displacement" else "最大位移", before.maxDispMm, after.maxDispMm, higherBetter = false, digits = 2, unit = " mm"),
         delta(
-            "特征应力（排除奇点）",
+            if (english) "Signature stress (excl. singularities)" else "特征应力（排除奇点）",
             before.signatureStressMPa, after.signatureStressMPa,
             higherBetter = false, digits = 2, unit = " MPa"
         )
@@ -614,7 +622,8 @@ class OptimizeSession(
             finite-element model whose verdict is "caution" or "danger" (insufficient safety factor
             or excessive displacement/stress). Propose structural optimization options.
 
-            Output contract (a single JSON object, no code fences, no other text):
+            Output contract (a single JSON object, no code fences, no other text).
+            ALL text fields (diagnosis / title / desc / expected / changes) MUST be written in English:
             {
               "ready": true,
               "diagnosis": "root cause: which member/location, which failure mode",

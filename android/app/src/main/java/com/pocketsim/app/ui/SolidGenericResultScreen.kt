@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pocketsim.app.AppContainer
 import com.pocketsim.app.AppJson
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.R
 import com.pocketsim.app.OptimizeGate
 import com.pocketsim.app.SafetyLogic
@@ -55,6 +57,7 @@ import com.pocketsim.app.SavedProject
 import com.pocketsim.app.SolidGenericModel
 import com.pocketsim.app.SolidGenericResult
 import com.pocketsim.app.Units
+import com.pocketsim.app.materialDisplayName
 import com.pocketsim.app.ui.components.ColorLegend
 import com.pocketsim.app.ui.components.MetricCard
 import kotlinx.coroutines.launch
@@ -83,6 +86,7 @@ fun SolidGenericResultScreen(
         ?: SafetyLogic.gradeFromVerdict(result.metrics.verdict)
 
     val context = LocalContext.current
+    val english = LocaleManager.currentLanguageCode(context) == LocaleStore.LANG_EN
     val scope = rememberCoroutineScope()
     val defaultTitle = stringResource(R.string.solid_generic_result_title)
     var saving by remember { mutableStateOf(false) }
@@ -475,7 +479,7 @@ fun SolidGenericResultScreen(
                 Text(
                     text = stringResource(
                         R.string.solid_generic_mesh_info_fmt,
-                        result.material,
+                        materialDisplayName(result.material, english),
                         Units.stress(result.material_params.eMPa).toString(),
                         formatNum(result.material_params.nu),
                         result.mesh.n_elements,

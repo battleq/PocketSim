@@ -58,6 +58,8 @@ stress at every mesh level**, monotonically improving as the mesh is refined. Tr
 solid-mode peak as a **lower bound**; for a defensible peak at a hole or fillet, cross-check
 against the hand Kt formula (as done above) rather than trusting a single mesh level.
 
+![Inventor 2027 result — perforated plate](images/comparison/hole-plate-inventor.jpg)
+
 | PocketSim result — coarse mesh | PocketSim result — ultra mesh |
 |---|---|
 | ![Coarse](images/comparison/hole-plate-pocketsim-coarse.jpg) | ![Ultra](images/comparison/hole-plate-pocketsim-ultra.jpg) |
@@ -87,7 +89,9 @@ load-application singularities, not usable results.
 The near-equal safety factors (1.76 vs 1.74) are a coincidence of two different
 under-estimations cancelling: different yield strengths (235 vs 207 MPa) and different stress levels.
 
-![PocketSim result — cantilever](images/comparison/cantilever-pocketsim.jpg)
+| Inventor 2027 result — cantilever | PocketSim result — cantilever |
+|---|---|
+| ![Inventor cantilever](images/comparison/cantilever-inventor.jpg) | ![PocketSim result — cantilever](images/comparison/cantilever-pocketsim.jpg) |
 
 ## What the two cases say together
 

@@ -46,15 +46,19 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pocketsim.app.AppContainer
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.R
 import com.pocketsim.app.ShellVesselModel
 import com.pocketsim.app.SolidGenericResult
+import com.pocketsim.app.materialDisplayName
 import com.pocketsim.app.ui.components.engineeringChipColors
 import kotlinx.coroutines.launch
 
@@ -74,6 +78,7 @@ fun ShellPreviewScreen(
     val scope = rememberCoroutineScope()
     val failedFmt = stringResource(R.string.param_run_failed)
     val defaultName = stringResource(R.string.shell_default_name)
+    val english = LocaleManager.currentLanguageCode(LocalContext.current) == LocaleStore.LANG_EN
 
     var meshLevel by remember { mutableStateOf(model.mesh_level.ifBlank { "medium" }) }
     var running by remember { mutableStateOf(false) }
@@ -179,7 +184,7 @@ fun ShellPreviewScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = stringResource(R.string.solid_generic_material_fmt, model.material, ""),
+                            text = stringResource(R.string.solid_generic_material_fmt, materialDisplayName(model.material, english), ""),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(

@@ -42,6 +42,8 @@
 随网格细化单调改善。实体模式峰值应视为**下限**；孔/圆角处要给出可信峰值，
 请配合手算 Kt 公式交叉校核（如上文所示），不要只信单一档位。
 
+![Inventor 2027 结果——开孔板](images/comparison/hole-plate-inventor.jpg)
+
 | PocketSim 结果——粗网格 | PocketSim 结果——ultra 网格 |
 |---|---|
 | ![粗网格](images/comparison/hole-plate-pocketsim-coarse.jpg) | ![ultra](images/comparison/hole-plate-pocketsim-ultra.jpg) |
@@ -66,7 +68,9 @@ Inventor 默认粗实体网格（平均单元 ≈ 82 mm，30 mm 板厚仅 1~2 �
 **偏刚**，位移与应力同时低估 11~13%；加载角点 143~165 MPa 局部峰值是施加方式奇点，不应采信。
 两边安全系数接近（1.76 vs 1.74）纯属巧合——屈服强度取值不同（235 vs 207 MPa）且应力水平双双偏低。
 
-![PocketSim 结果——悬臂梁](images/comparison/cantilever-pocketsim.jpg)
+| Inventor 2027 结果——悬臂梁 | PocketSim 结果——悬臂梁 |
+|---|---|
+| ![Inventor 悬臂梁](images/comparison/cantilever-inventor.jpg) | ![PocketSim 结果——悬臂梁](images/comparison/cantilever-pocketsim.jpg) |
 
 ## 两个案例合起来说明什么
 

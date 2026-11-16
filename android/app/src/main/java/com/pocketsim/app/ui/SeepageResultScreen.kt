@@ -40,15 +40,19 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.R
 import com.pocketsim.app.SafetyLogic
 import com.pocketsim.app.SeepageRenderData
 import com.pocketsim.app.SeepageResult
 import com.pocketsim.app.Units
+import com.pocketsim.app.materialDisplayName
 import com.pocketsim.app.ui.components.ColorLegend
 import com.pocketsim.app.ui.components.ColorRamp
 import com.pocketsim.app.ui.components.MetricCard
@@ -73,6 +77,7 @@ fun SeepageResultScreen(
         .takeIf { it != SafetyLogic.Grade.UNKNOWN }
         ?: SafetyLogic.gradeFromVerdict(result.verdict)
     val defaultTitle = stringResource(R.string.seepage_result_title)
+    val english = LocaleManager.currentLanguageCode(LocalContext.current) == LocaleStore.LANG_EN
 
     Scaffold(
         topBar = {
@@ -379,7 +384,7 @@ fun SeepageResultScreen(
                 Text(
                     text = stringResource(
                         R.string.seepage_mesh_info_fmt,
-                        result.material,
+                        materialDisplayName(result.material, english),
                         Units.density(result.density_kg_m3).toString(),
                         formatNum(result.solve_ms)
                     ),

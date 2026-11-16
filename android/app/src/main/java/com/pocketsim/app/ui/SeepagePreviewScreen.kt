@@ -43,15 +43,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pocketsim.app.AppContainer
+import com.pocketsim.app.LocaleManager
+import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.R
 import com.pocketsim.app.SeepageModel
 import com.pocketsim.app.SeepageResult
 import com.pocketsim.app.Units
+import com.pocketsim.app.materialDisplayName
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
@@ -74,6 +78,7 @@ fun SeepagePreviewScreen(
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val unknownError = stringResource(R.string.error_unknown_default)
+    val english = LocaleManager.currentLanguageCode(LocalContext.current) == LocaleStore.LANG_EN
 
     Scaffold(
         topBar = {
@@ -221,7 +226,7 @@ fun SeepagePreviewScreen(
                         val unspecified = stringResource(R.string.unspecified)
                         val permFmt = stringResource(R.string.seepage_permeability_fmt)
                         Text(
-                            text = model.material.ifBlank { unspecified } +
+                            text = materialDisplayName(model.material, english).ifBlank { unspecified } +
                                 (model.foundation_permeability_m_s?.let {
                                     permFmt.format(formatSci(it))
                                 } ?: ""),

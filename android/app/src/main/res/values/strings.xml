@@ -809,6 +809,7 @@
     <string name="optimize_diagnosis_header">问题诊断</string>
     <string name="optimize_scheme_header">优化方案</string>
     <string name="optimize_expected">预期效果</string>
+    <string name="optimize_label_sep">：</string>
     <string name="optimize_changes">改动内容</string>
     <string name="optimize_figure_title">优化效果图（拟物化示意）</string>
     <string name="optimize_figure_hint">单指拖动旋转，双指捏合缩放</string>
