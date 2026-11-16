@@ -4,7 +4,7 @@
 
 PocketSim is a free Android finite element analysis (FEA) app with an [open-source solver engine](python/pocketsim/) (AGPL-3.0). Describe a structure in one sentence or take a photo: AI builds the model, and your phone solves it on the spot. No workstation, no CAE license, no FEM background.
 
-[Download APK](https://github.com/battleq/PocketSim/releases) · [中文说明](README.zh-CN.md) · [Report an issue](https://github.com/battleq/PocketSim/issues) · [Gitee mirror](https://gitee.com/battleQ/pocketsim/releases)
+[Download APK](https://github.com/battleq/PocketSim/releases) · [中文说明](README.zh-CN.md) · [Report an issue](https://github.com/battleq/PocketSim/issues)
 
 <!-- Hero GIF placeholder: replace with docs/images/hero.gif after recording (photo -> AI model -> solve -> stress contour, 10-15 s, < 5 MB) -->
 > 🎬 *Demo GIF coming soon: photo → AI model → solve → stress contour.*
@@ -109,7 +109,7 @@ Each example below ships with the app. Tap it on the home screen to fill in the 
 
 ## Quick Start
 
-1. Install the [latest APK](https://github.com/battleq/PocketSim/releases) (or the [Gitee mirror](https://gitee.com/battleQ/pocketsim/releases) in mainland China), or build from source below.
+1. Install the [latest APK](https://github.com/battleq/PocketSim/releases), or build from source below.
 2. Pick an example or a template on the home screen, or describe your own part.
 3. Check the geometry, material, loads and supports the AI proposed, then tap **Run**.
 

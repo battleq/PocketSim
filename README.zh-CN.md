@@ -4,7 +4,7 @@
 
 PocketSim 是一款免费的安卓有限元分析（FEA）应用，[求解引擎开源](python/pocketsim/)（AGPL-3.0）。用一句话或一张照片描述构件，AI 生成模型，手机当场完成求解。无需工作站，无需 CAE 授权，也不要求有限元背景。
 
-[下载 APK](https://github.com/battleq/PocketSim/releases) · [English](README.md) · [问题反馈](https://github.com/battleq/PocketSim/issues) · [Gitee 镜像](https://gitee.com/battleQ/pocketsim/releases)
+[下载 APK](https://github.com/battleq/PocketSim/releases) · [English](README.md) · [问题反馈](https://github.com/battleq/PocketSim/issues)
 
 <!-- Hero GIF 占位：录制后替换为 docs/images/hero.gif（拍照 → AI 建模 → 求解 → 应力云图，10–15 秒，小于 5 MB） -->
 > 🎬 *演示动图即将补充：拍照 → AI 建模 → 求解 → 应力云图。*
@@ -109,7 +109,7 @@ PocketSim 是一款免费的安卓有限元分析（FEA）应用，[求解引擎
 
 ## 快速上手
 
-1. 下载[最新 APK](https://github.com/battleq/PocketSim/releases)（中国大陆可用 [Gitee 镜像](https://gitee.com/battleQ/pocketsim/releases)），或按下文从源码构建。
+1. 下载[最新 APK](https://github.com/battleq/PocketSim/releases)，或按下文从源码构建。
 2. 在首页选一个示例或场景模板，或描述你自己的构件。
 3. 检查 AI 给出的几何、材料、载荷与支承，点击 **开始分析**。
 

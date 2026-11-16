@@ -1,6 +1,6 @@
 # 更新日志
 
-English version: [CHANGELOG.md](CHANGELOG.md)。下载：[GitHub Releases](https://github.com/battleq/PocketSim/releases)，中国大陆镜像：[Gitee Releases](https://gitee.com/battleQ/pocketsim/releases)。
+English version: [CHANGELOG.md](CHANGELOG.md)。下载：[GitHub Releases](https://github.com/battleq/PocketSim/releases)。
 
 ## v1.2.35（2026-11-16）
 
