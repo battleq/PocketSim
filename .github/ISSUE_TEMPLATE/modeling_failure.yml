@@ -1,0 +1,77 @@
+name: AI modeling failure / AI 建模失败或结果不对
+description: AI built a wrong model, refused, or the result does not match the description / AI 建出的模型与描述不符、失败或超时
+title: "[Modeling] "
+labels: ["ai-modeling"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > ⚠️ **Never paste API keys, tokens or passwords into a public issue.**
+        > ⚠️ **请勿在公开 issue 中粘贴 API Key、令牌或密码。**
+  - type: textarea
+    id: prompt
+    attributes:
+      label: Your exact input (text or photo description) / 你的原始输入（文字或照片内容描述）
+      placeholder: Paste the wording you sent to the AI verbatim. / 请原样粘贴发给 AI 的描述。
+    validations:
+      required: true
+  - type: dropdown
+    id: feature
+    attributes:
+      label: Modeling branch / 建模分支
+      options:
+        - "Frame / 框架（梁）"
+        - "Solid / 实体"
+        - "Flow / 流体"
+        - "Seepage / 渗流"
+        - "Shell vessel / 薄壁容器"
+        - "Buried pipe / 埋地管"
+        - "Candidate selection / 候选模型"
+        - "Model edit / 修改模型"
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: AI provider configured / 使用的 AI 服务商
+      options:
+        - "DeepSeek"
+        - "OpenAI"
+        - "Claude"
+        - "Gemini"
+        - "Qwen / 通义"
+        - "Doubao / 豆包"
+        - "Other / 其他（请在下方说明）"
+    validations:
+      required: true
+  - type: dropdown
+    id: symptom
+    attributes:
+      label: Symptom / 症状
+      options:
+        - "Timeout / error message / 超时或报错"
+        - "Wrong geometry or supports / 几何、约束与描述不符"
+        - "Unrealistic scale or units / 尺寸或单位明显不对"
+        - "Keeps asking questions / 反复追问无法完成建模"
+        - "Chinese text in English UI / 英文界面出现中文"
+        - "Other / 其他"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What model did you expect? / 你期望得到的模型
+      description: A rough sketch or description is fine. / 文字或草图描述即可。
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, retry behavior, anything else / 截图、重试表现等补充信息
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm / 确认
+      options:
+        - label: I removed any API keys or personal data from attachments. / 附件中已去除 API Key 与个人数据。
+          required: true

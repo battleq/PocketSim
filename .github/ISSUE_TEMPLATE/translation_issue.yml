@@ -1,0 +1,39 @@
+name: Translation issue / 翻译问题（英文界面中文泄漏、措辞不当）
+description: Chinese text leaking into the English UI, or awkward wording / 英文界面出现中文，或措辞不自然
+title: "[i18n] "
+labels: ["i18n"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        PocketSim ships a bilingual UI (中文 / English). English mode should contain **no Chinese text** except custom or web-looked-up material names.
+        本应用为中英双语界面。除自定义/联网检索的材料名外，英文模式不应出现中文。
+  - type: input
+    id: screen
+    attributes:
+      label: Screen path / 出现页面路径
+      placeholder: "e.g. Result screen → AI optimization → change list / 例：结果页 → AI 优化 → 改动清单"
+    validations:
+      required: true
+  - type: textarea
+    id: found
+    attributes:
+      label: What you saw (original leaked text) / 看到的原文（泄漏的中文或不自然措辞）
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested wording (optional) / 建议译法（可选）
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot / 截图
+      description: Drag & drop works. Blur any personal data. / 可直接拖拽上传，注意遮挡个人数据。
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm / 确认
+      options:
+        - label: UI language is set to English. / 界面语言已设为 English。
+          required: true

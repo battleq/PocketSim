@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Questions & discussion
+  - name: Questions, ideas & sharing your models / 使用提问、想法与作品分享
     url: https://github.com/battleq/PocketSim/discussions
-    about: For usage questions, example cases and feature inquiries, please open a Discussions thread instead of an Issue.
-  - name: Show and tell
-    url: https://github.com/battleq/PocketSim/discussions/categories/show-and-tell
-    about: Share real-life mechanics cases you have analyzed and your result images.
+    about: General questions and community showcase go to GitHub Discussions. / 一般性提问与社区展示请发 Discussions。
+  - name: Commercial licensing / 商业授权
+    url: https://github.com/battleq/PocketSim/issues/new?template=commercial_license.yml
+    about: See LICENSE-COMMERCIAL and NOTICE.md first. / 请先阅读 LICENSE-COMMERCIAL 与 NOTICE.md。

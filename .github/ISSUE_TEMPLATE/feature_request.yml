@@ -1,0 +1,41 @@
+name: Feature request / 功能建议
+description: New solver type, workflow or capability idea / 新求解类型、工作流或功能想法
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Your scenario / 使用场景
+      placeholder: What are you trying to check or design? / 你想校核或设计什么？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like / 期望的功能
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workaround you use today / 目前的替代做法
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area / 涉及模块
+      options:
+        - "New solver type / 新求解类型"
+        - "Frame / 框架"
+        - "Solid / 实体"
+        - "Flow / 流体"
+        - "Seepage / 渗流"
+        - "Shell vessel / 薄壁容器"
+        - "Buried pipe / 埋地管"
+        - "AI modeling / AI 建模"
+        - "AI optimization / AI 优化"
+        - "Report export / 报告导出"
+        - "Material library / 材料库"
+        - "Other / 其他"
+    validations:
+      required: true

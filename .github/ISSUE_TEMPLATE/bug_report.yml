@@ -1,0 +1,91 @@
+name: Bug report / 问题反馈
+description: Crash, wrong result, or UI misbehavior / 崩溃、结果异常或界面问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > ⚠️ **Never paste API keys, tokens or passwords into a public issue.**
+        > ⚠️ **请勿在公开 issue 中粘贴 API Key、令牌或密码。**
+  - type: dropdown
+    id: app_version
+    attributes:
+      label: App version / 应用版本
+      options:
+        - "1.2.36 (versionCode 84)"
+        - "1.2.35"
+        - "1.2.34"
+        - "Older / 更早"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device & Android version / 设备与安卓版本
+      placeholder: "e.g. Pixel 7, Android 14 / 例：小米13，Android 13"
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: UI language / 界面语言
+      options:
+        - "中文"
+        - "English"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature area / 功能模块
+      options:
+        - "Frame / 框架"
+        - "Solid / 实体"
+        - "Flow / 流体"
+        - "Seepage / 渗流"
+        - "Shell vessel / 薄壁容器"
+        - "Buried pipe / 埋地管"
+        - "AI modeling / AI 建模"
+        - "AI optimization / AI 优化"
+        - "PDF report / 报告导出"
+        - "Material library / 材料库"
+        - "Settings / 设置"
+        - "Other / 其他"
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened? / 发生了什么
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      placeholder: |
+        1. Open ... / 打开……
+        2. Tap ... / 点击……
+        3. See ... / 看到……
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior / 期望行为
+  - type: textarea
+    id: logs
+    attributes:
+      label: Crash log (optional) / 崩溃日志（可选）
+      description: Trimmed `adb logcat` output. Remove anything sensitive. / 精简后的 `adb logcat` 输出，注意去除敏感信息。
+      render: text
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm / 确认
+      options:
+        - label: I removed any API keys or personal data from attachments. / 附件中已去除 API Key 与个人数据。
+          required: true
+        - label: I searched existing issues for a similar report. / 已搜索过相似 issue。
+          required: false

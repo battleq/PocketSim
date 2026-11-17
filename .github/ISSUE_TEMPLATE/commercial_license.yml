@@ -1,0 +1,35 @@
+name: Commercial licensing / 商业授权咨询
+description: Request a commercial license for the solver engine or client / 申请求解引擎或客户端的商业授权
+title: "[Commercial] "
+labels: ["commercial"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read [LICENSE-COMMERCIAL](../../blob/main/LICENSE-COMMERCIAL) and [NOTICE.md](../../blob/main/NOTICE.md) first. Personal study, research and AGPL-compliant open source projects do **not** need a commercial license.
+        请先阅读 LICENSE-COMMERCIAL 与 NOTICE.md。个人学习、研究及遵守 AGPL 的开源项目无需商业授权。
+        > ⚠️ This issue is public — describe your use case only, no confidential details.
+        > ⚠️ 本 issue 公开可见——请只描述用途，勿贴机密信息。
+  - type: dropdown
+    id: scope
+    attributes:
+      label: What do you need to license? / 需要授权的内容
+      options:
+        - "Solver engine (python/pocketsim) without AGPL / 引擎（免 AGPL 义务）"
+        - "Client embedding / closed-source distribution / 客户端集成或闭源分发"
+        - "OEM / hardware pre-install / OEM 预装"
+        - "SaaS or internal platform / SaaS 或企业内部平台"
+        - "Trademark use (PocketSim / 口袋仿真) / 商标使用"
+        - "Other / 其他"
+    validations:
+      required: true
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Use case summary / 用途概述
+    validations:
+      required: true
+  - type: input
+    id: company
+    attributes:
+      label: Company / organization (optional) / 公司或组织（可选）
