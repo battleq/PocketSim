@@ -162,7 +162,7 @@ The `flow`, `solver` and `seepage` tests depend on `scikit-fem`; install the ful
 
 ```
 pocketsim/
-├── android/        # Android app (Kotlin + Compose + Chaquopy); see android/README.md
+├── android/        # Android app (Kotlin + Compose + Chaquopy), proprietary — see android/LICENSE
 ├── python/         # Solver engine (runs and tests standalone)
 │   ├── pocketsim/  # engine, templates, frame, solid, shell, buried_pipe, seepage, ...
 │   └── tests/      # pytest suite
@@ -187,7 +187,8 @@ This project uses a **tiered license**; the full scope is defined in [NOTICE.md]
 | `android/` client | **Proprietary (All Rights Reserved)** | No copying, modifying, closed-source distribution or commercial use without written permission |
 | Name & icons | **Trademark reserved** | You may state the source truthfully; you may not impersonate the official build |
 
-- AGPL text: [LICENSE](LICENSE)
+- AGPL text (Python engine): [LICENSE](LICENSE)
+- Android client (proprietary, All Rights Reserved): [android/LICENSE](android/LICENSE)
 - Tiered scope, Section 7 additional permission, trademark and contribution terms: [NOTICE.md](NOTICE.md)
 - Commercial licensing: [LICENSE-COMMERCIAL](LICENSE-COMMERCIAL)
 

@@ -162,7 +162,7 @@ python -m pytest tests/test_frame.py tests/test_frame3d.py tests/test_materials.
 
 ```
 pocketsim/
-├── android/        # 安卓应用（Kotlin + Compose + Chaquopy），详见 android/README.zh-CN.md
+├── android/        # 安卓应用（Kotlin + Compose + Chaquopy），专有软件——许可见 android/LICENSE
 ├── python/         # 求解引擎（可独立运行与测试）
 │   ├── pocketsim/  # engine、templates、frame、solid、shell、buried_pipe、seepage 等
 │   └── tests/      # pytest 用例
@@ -187,7 +187,8 @@ pocketsim/
 | `android/` 客户端 | **专有（All Rights Reserved）** | 未经书面许可不得复制、修改、闭源分发或商用 |
 | 名称与图标 | **商标保留** | 可如实说明来源，不得冒充官方版本 |
 
-- AGPL 原文：[LICENSE](LICENSE)
+- AGPL 原文（Python 引擎）：[LICENSE](LICENSE)
+- 安卓客户端（专有，保留所有权利）：[android/LICENSE](android/LICENSE)
 - 分层范围、第 7 条附加许可、商标与贡献约定：[NOTICE 授权说明](NOTICE.zh-CN.md)
 - 商业授权咨询：[LICENSE-COMMERCIAL](LICENSE-COMMERCIAL)
 
