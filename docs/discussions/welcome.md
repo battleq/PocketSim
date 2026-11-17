@@ -8,6 +8,10 @@
 
 This is the project's official Discussions area — come here to chat, ask questions, and share your cases.
 
+## A note from the maintainer
+
+PocketSim is still in its early days: a sub-70-MB APK that handles modest beam, solid and vessel problems. Next to mature commercial FEA suites, it is a drop in the ocean — but a drop has never tried to outsize the ocean. Its point is different: when you wonder whether the balcony drying rack will hold or your aquarium glass is thick enough, you shouldn't have to open ANSYS and relearn FEA first. One photo, one sentence, an answer on the spot. With every release, this little drop catches a bit more of the ocean's light.
+
 ## What you can do here
 
 | Category | Purpose |

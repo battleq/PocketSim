@@ -30,6 +30,8 @@ Everyday problems need risk awareness, not certified precision. PocketSim uses c
 
 **Why not just ask a chatbot?** A language model writes a plausible sentence; it has no solver, so it cannot integrate the stiffness of *your* section, span and supports, and its assumptions stay invisible. PocketSim puts those assumptions on screen as editable fields and computes the number with finite elements. The longer argument, and where the line between the two should sit, is in [docs/why-pocketsim.md](docs/why-pocketsim.md).
 
+In all honesty, PocketSim is still in its early days — a sub-70-MB APK that handles modest beam, solid and vessel problems. Next to mature commercial FEA suites it is a drop in the ocean. But the drop's job is different: making mechanics checks effortless, not trying to outsize the ocean.
+
 ## How It Works
 
 1. **Describe or photograph** the part, or pick an example from the home screen.
