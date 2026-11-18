@@ -19,6 +19,14 @@ Solving does. Building a model with AI needs a network connection to your LLM pr
 **Where is my data stored?**
 Models and settings stay on the phone, in the app's private storage. The app has no server and collects nothing. Only the AI modelling step sends text and images — directly to the provider whose key you entered. See [why-pocketsim.md](why-pocketsim.md) for the privacy model.
 
+## Why PocketSim
+
+**Why not just ask Doubao (or any chatbot) about these everyday questions?**
+PocketSim computes with a finite element model and presents the result graphically — the stress contour and the deformed shape show exactly where the stress and deflection are largest and most dangerous. If the check finds a safety risk, it also produces a reinforcement plan, shown graphically the same way. An LLM's answer is closer to folk experience; it struggles to describe the actual stress and deformation state of your object, and it cannot hand you these pictures. The full argument is in [why-pocketsim.md](why-pocketsim.md).
+
+**Why has nobody shipped physics simulation as an app before?**
+The problem was never compute — it was inputs. A phone from 2020 is already faster than the 1995 workstation that ran crash simulations. But FEM modelling demands skill: fluent 3D CAD modelling, knowing how to simplify a structure to fit the mechanics assumptions, telling elastic from plastic behaviour, knowing which parameters an anisotropic material needs, idealising each boundary condition into the right constraint. That is too hard without specialist knowledge. PocketSim uses AI to solve the input problem: the AI interprets between the human and the simulation algorithm, turning everyday scenes and natural language into a model — the input a solver understands.
+
 ## AI setup
 
 **Do I need an API key?**

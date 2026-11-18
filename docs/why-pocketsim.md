@@ -2,21 +2,25 @@
 
 > English · [中文](why-pocketsim.zh-CN.md)
 
-> **Short version:** a chatbot writes a sentence. A solver produces a number you can check.
+> **Short version:** a chatbot hands you a paragraph. PocketSim hands you a picture — a stress contour and a deformed shape computed by finite elements that mark where the danger is, plus a graphical reinforcement plan when the structure is at risk.
 
-## The gap CAE never crossed
+## Why has nobody shipped physics simulation as an app before?
 
-Finite element analysis has driven industry for decades — car crashes, wing flutter, seismic design of bridges. It never reached daily life.
+Finite element analysis has driven industry for decades — car crashes, wing flutter, seismic design of bridges. Yet it never reached daily life, and nobody shipped it as a phone app.
 
-The bottleneck is not compute. A phone from 2020 is faster than the workstation that ran a 1995 crash simulation. The bottleneck is **inputs**. CAD only needs the shape to look right. CAE needs clean solid geometry, trustworthy material parameters, and correct boundary conditions. A real bookshelf has nail holes, wood grain, gaps and chamfers — "dirty geometry" that takes hours to repair. Is pine's modulus 8 or 12 GPa? How hard does a person actually lean on a railing? What safety factor?
+The bottleneck is not compute. A phone from 2020 is faster than the workstation that ran a 1995 crash simulation. The bottleneck is **inputs**: turning reality into a model a solver can read is a skilled trade.
 
-Every input is a guess, so every professional workflow is built around tightening those guesses: metrology, material testing, standards, review. That is the right answer for a bridge. It is a wrong answer for "will this shelf hold 20 kg of books".
+The trade means being fluent at 3D CAD modelling, knowing how to simplify a real structure to fit the mechanics assumptions, knowing elastic from plastic material behaviour, knowing which parameters an anisotropic material needs, and knowing what form of constraint each boundary condition should be idealised into. CAD only needs the shape to look right. CAE needs clean solid geometry, trustworthy material parameters, and correct boundary conditions. A real bookshelf has nail holes, wood grain, gaps and chamfers — "dirty geometry" that takes hours to repair. Is pine's modulus 8 or 12 GPa? How hard does a person actually lean on a railing? What safety factor?
 
-## Why not just ask a chatbot?
+Every input is a guess, so every professional workflow is built around tightening those guesses: metrology, material testing, standards, review. That is the right answer for a bridge. It is a wrong answer for "will this shelf hold 20 kg of books" — and for anyone without the training, the door is simply shut at the input stage. That is why physics simulation never became an app.
+
+**PocketSim uses AI to solve the input problem.** The AI acts as the interpreter between a human and the physics-simulation algorithm: it turns the scene you look at and the sentence you say into a model — the input a solver understands.
+
+## Why not just ask Doubao?
 
 This is the first question everyone asks, and it deserves a straight answer.
 
-A large language model is very good at **language**. It is not a solver. When you ask "will this 1.2 m aluminium tube bend under 5 kg", it will produce a confident paragraph, and that paragraph is assembled from patterns in its training data, not from your geometry. Three things follow:
+A large language model is very good at **language**. It is not a solver. When you ask "will this 1.2 m aluminium tube bend under 5 kg", it will produce a confident paragraph — assembled from patterns in its training data, closer to **folk experience** than to your geometry. An LLM struggles to describe the actual stress and deformation state of the thing in front of you. Four things follow:
 
 **1. It cannot compute the number you asked for.**
 Deflection of a beam is a boundary-value problem. A model with no numerical solver has two options: recall a formula from memory, or interpolate something plausible. It cannot integrate the stiffness matrix of *your* section, *your* span, *your* support conditions. The more your case departs from a textbook formula — three members instead of one, a hole, a non-uniform load — the more the answer drifts into invention.
@@ -26,6 +30,9 @@ A chatbot answer hides its own model. You do not see which end it assumed fixed,
 
 **3. Failures look the same as successes.**
 A wrong chatbot answer has the same fluent shape as a right one. A finite element solver fails *loudly*: a rigid-body mode is reported as a singular matrix, an unbalanced model trips an equilibrium residual check, a mechanism shows a displacement larger than the part itself. PocketSim surfaces those failures instead of hiding them.
+
+**4. The answer is text, not a picture.**
+PocketSim computes with a finite element model and shows the result graphically: a stress contour and a deformed shape point out **where the stress and the deflection are largest and most dangerous**, not just one vague number. If the check finds a safety risk, it also proposes a reinforcement plan — what to change and how, shown graphically — and re-solves so you can compare before and after. That is a capability LLMs simply do not have: they can only hand you a paragraph.
 
 ### The division of labour
 
@@ -73,5 +80,5 @@ The underlying method is standard finite elements: discretise, assemble, solve, 
 
 - [validation.md](validation.md) — measured error against closed-form solutions
 - [limitations.md](limitations.md) — supported element types, sections, loads
-- [faq.md](faq.md) — common questions, including "why not just use an AI chatbot"
+- [faq.md](faq.md) — common questions, including "why not just ask a chatbot"
 - [performance-benchmarks.md](performance-benchmarks.md) — mesh sizes and solve times
