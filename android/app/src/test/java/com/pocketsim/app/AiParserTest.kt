@@ -1745,6 +1745,26 @@ class SolidGenericValidationTest {
         assertEquals(3, client.calls.size)
     }
 
+    @Test
+    fun `结构+语义重试叠加受全局上限3次兜底`() = runTest {
+        // 无全局上限时最坏 4 次调用（1 结构 + 2 语义）；P2-7 后第 3 次仍语义失败即抛，
+        // 第 4 条 goodSgJson 不应被消费（FakeAiClient 越界会抛 IndexOutOfBounds）
+        val client = FakeAiClient(listOf("抱歉，说不清楚。", badL05Json, badL05Json, goodSgJson))
+        val err = runCatching {
+            AiParser.parseFrameWithRetry(
+                client, listOf(LlmMessage("user", "问题")), forceSolidGeneric = true
+            )
+        }.exceptionOrNull()
+        assertTrue("应抛 AiRetryExhaustedException，实际是 $err", err is AiRetryExhaustedException)
+        val exhausted = err as AiRetryExhaustedException
+        assertEquals(3, exhausted.attempts)
+        assertEquals(3, client.calls.size)
+        // 首轮结构错误记录在 firstError；结构重试消息（第 2 次调用）带格式示例
+        assertTrue(exhausted.firstError!!.isNotBlank())
+        assertTrue(client.calls[1].last().content.contains("无法解析"))
+        assertTrue(exhausted.message!!.contains("[L-05]"))
+    }
+
     // ---- G-01/G-02 可网格化预检（预览前 fail-fast） ----
 
     @Test

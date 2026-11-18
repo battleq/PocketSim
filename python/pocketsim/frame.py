@@ -35,6 +35,7 @@ from .interpret import hair_analogy
 from .materials import MaterialsLibrary
 from .stability import DOF_LABELS_2D, check_mechanism
 from .frame3d import hole_net_section, parse_member_holes
+from .flow import AIR_DENSITY, CP_NET, speed_from_beaufort
 
 # 规模上限（生活场景足够；防 AI 生成失控模型拖垮手机）
 MAX_NODES = 60
@@ -208,6 +209,7 @@ def _validate(model: Dict[str, Any]) -> Dict[str, Any]:
         "w": "udl", "dist": "udl",
         "surface": "area", "panel": "area", "areaload": "area",
         "面荷载": "area", "面载荷": "area",
+        "windload": "wind", "风载": "wind", "风荷载": "wind",
     }
     for ld in raw_loads:
         ltype_raw = str(ld.get("type", "")).strip().lower()
@@ -255,6 +257,42 @@ def _validate(model: Dict[str, Any]) -> Dict[str, Any]:
             q = total / span
             for k in mis:
                 loads.append({"type": "udl", "member": k, "qy": q})
+        elif ltype == "wind":
+            # 风载源字段（P1-5）：LLM 只报风速/风级与受风面积，动压换算在代码侧完成
+            # （净风力 F = cp·½ρv²·A），按迎风节点均摊为水平集中力，禁止模型心算风荷载。
+            nids = ld.get("nodes") or []
+            if not nids:
+                _err("风载必须用 nodes 列出迎风节点 id")
+            try:
+                nis = [ids[n] for n in nids]
+            except KeyError:
+                _err(f"风载引用了不存在的节点：{nids}")
+            v = ld.get("wind_speed_m_s")
+            lv = ld.get("beaufort")
+            if v is not None and lv is not None:
+                _err("风载风速来源冲突：wind_speed_m_s 与 beaufort 二选一，不得同时提供")
+            if v is None and lv is None:
+                _err("风载缺少风速来源：请给 wind_speed_m_s（m/s）或 beaufort（0~17 级风）")
+            speed = float(v) if v is not None else speed_from_beaufort(int(lv))
+            if not (0.0 < speed <= 75.0):
+                _err(f"风载风速 {speed:.1f} m/s 超出合理范围（0~75 m/s）")
+            area = float(ld.get("area_m2", 0.0))
+            if area <= 0.0:
+                _err("风载必须提供受风投影面积 area_m2（单位 m²，>0）")
+            cp = float(ld.get("cp") or CP_NET)
+            if cp <= 0.0:
+                _err("风载体型系数 cp 必须为正")
+            direction = str(ld.get("dir", "x")).strip().lower()
+            if direction not in ("x", "y"):
+                _err(f"平面风载方向 dir 只支持 x/y（收到 {ld.get('dir')}）")
+            share = cp * 0.5 * AIR_DENSITY * speed * speed * area / len(nis)
+            for ni in nis:
+                loads.append({
+                    "type": "force", "node": ni,
+                    "fx": share if direction == "x" else 0.0,
+                    "fy": share if direction == "y" else 0.0,
+                    "mz": 0.0,
+                })
         elif ltype == "thermal":
             # 杆件均匀温度变化（相对参考温度，°C 等价于 K）
             try:
@@ -266,9 +304,9 @@ def _validate(model: Dict[str, Any]) -> Dict[str, Any]:
                 _err("温度载荷 delta_temp 不能为 0（升温为正，降温为负，单位 °C）")
             loads.append({"type": "thermal", "member": mi, "delta_temp": dt})
         else:
-            _err(f"载荷类型 {ltype} 不支持（可用：force 节点力 / udl 杆件均布 / area 面荷载 / thermal 杆件温度变化）")
+            _err(f"载荷类型 {ltype} 不支持（可用：force 节点力 / udl 杆件均布 / area 面荷载 / wind 风载 / thermal 杆件温度变化）")
     if not loads:
-        _err("模型没有有效载荷（loads 为空或数值全为 0）；水平风载请用节点集中力 fx 分摊到迎风节点")
+        _err("模型没有有效载荷（loads 为空或数值全为 0）；水平风载请用 type=wind（风速/风级+受风面积，代码自动换算）")
 
     # 材料属性回填（失败给出可用材料列表）
     lib = model.get("_library")

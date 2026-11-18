@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from datetime import date
 from pathlib import Path
@@ -38,6 +39,44 @@ if not BUILTIN_US_PATH.exists():
 USER_FILENAME = "materials_user.json"
 # 材料记录必填字段
 _REQUIRED_FIELDS = ("name", "elastic_modulus", "poisson_ratio", "density", "strength")
+
+# 入库数值合理范围（规则 MAT-01，与 Android 侧 MaterialValidation 互为镜像）：
+# elastic_modulus 单位 Pa，strength 单位 MPa，density 单位 kg/m³
+_E_RANGE_PA = (0.5e6, 1.5e12)        # 0.5 ~ 1500000 MPa
+_NU_RANGE = (0.0, 0.49)
+_DENSITY_RANGE = (50.0, 25000.0)
+_STRENGTH_RANGE_MPA = (0.01, 5000.0)
+
+
+def _validate_record_values(rec: Dict[str, Any]) -> None:
+    """入库数值合理性校验（MAT-01）：超范围/非数值即拒绝，防止坏输入污染求解。
+
+    只在 upsert_material 写入路径调用；load_library 合并已有副本时不调用，
+    避免个别历史记录越界导致启动加载失败。
+    """
+    def num(key: str) -> float:
+        try:
+            v = float(rec[key])
+        except KeyError:
+            raise ValueError(f"材料记录缺少必填字段: {key}")
+        except (TypeError, ValueError):
+            raise ValueError(f"材料字段 {key} 必须是数值，实际：{rec[key]!r}")
+        if not math.isfinite(v):
+            raise ValueError(f"材料字段 {key} 必须是有限数值")
+        return v
+
+    e = num("elastic_modulus")
+    if not (_E_RANGE_PA[0] <= e <= _E_RANGE_PA[1]):
+        raise ValueError(f"弹性模量 {e / 1e6:g} MPa 超出合理范围（0.5~1500000 MPa）")
+    nu = num("poisson_ratio")
+    if not (_NU_RANGE[0] <= nu <= _NU_RANGE[1]):
+        raise ValueError(f"泊松比 {nu:g} 超出合理范围（0~0.49）")
+    rho = num("density")
+    if not (_DENSITY_RANGE[0] <= rho <= _DENSITY_RANGE[1]):
+        raise ValueError(f"密度 {rho:g} kg/m³ 超出合理范围（50~25000 kg/m³）")
+    s = num("strength")
+    if not (_STRENGTH_RANGE_MPA[0] <= s <= _STRENGTH_RANGE_MPA[1]):
+        raise ValueError(f"强度 {s:g} MPa 超出合理范围（0.01~5000 MPa）")
 
 
 def _norm(text: Any) -> str:
@@ -189,7 +228,9 @@ class MaterialsLibrary:
         库内任何材料发生交集即视为同一材料，就地更新并合并别名。
         source_label 形如“联网检索”，最终写入 source 为“联网检索+YYYY-MM-DD”。
         返回 (最终记录, "inserted" | "updated")。
+        数值越界/非数值时抛 ValueError（MAT-01），拒绝入库。
         """
+        _validate_record_values(record)
         return self._upsert_into(self._records, record, source_label)
 
     def delete_material(self, material_id: str) -> bool:

@@ -28,6 +28,15 @@ val AppJson: Json = Json {
     encodeDefaults = true
 }
 
+/**
+ * 提示词/锚定块专用序列化：省略 null 字段（AppJson 的 encodeDefaults 会把
+ * "_case_meta":null 也写出来，锚定块要求埋点键完全不进 LLM 提示词）。
+ * 与 Python 求解契约无关——bridge 调用仍用 AppJson（_case_meta 键名必须保留）。
+ */
+val PromptJson: Json = Json(from = AppJson) {
+    explicitNulls = false
+}
+
 // =====================================================================
 // 模板与参数 schema（对应 pocketsim.bridge.list_templates 的返回元素）
 // =====================================================================
@@ -481,6 +490,18 @@ data class FrameLoad(
     val qx: Double = 0.0,
     val qy: Double = 0.0,
     val qz: Double = 0.0,
+    /** wind：迎风节点 id 列表（净风力由代码侧换算后均摊到这些节点） */
+    val nodes: List<Int>? = null,
+    /** wind：风速（m/s）；与 beaufort 二选一互斥 */
+    val wind_speed_m_s: Double? = null,
+    /** wind：蒲福风级（0~17）；与 wind_speed_m_s 二选一互斥 */
+    val beaufort: Int? = null,
+    /** wind：受力方向（2D 为 x/y，3D 为 x/y/z），风沿该轴正向吹 */
+    val dir: String = "x",
+    /** wind：受风投影面积（m²，>0） */
+    val area_m2: Double = 0.0,
+    /** wind：净体型系数（<=0 时求解器取默认 1.2） */
+    val cp: Double = 0.0,
     /** thermal：杆件温度变化（°C，升温为正、降温为负，基准 20°C） */
     val delta_temp: Double = 0.0
 )
@@ -497,7 +518,9 @@ data class FrameModel(
     val supports: List<FrameSupport> = emptyList(),
     val loads: List<FrameLoad> = emptyList(),
     /** 维度：2 平面 / 3 空间（缺省 2，保证旧模型行为不变） */
-    val dim: Int = 2
+    val dim: Int = 2,
+    /** 案例埋点上下文（不参与求解，由 ChatSession 注入；JSON 键 _case_meta，bridge 弹出后不入求解器） */
+    @SerialName("_case_meta") val case_meta: CaseMeta? = null
 )
 
 // =====================================================================
@@ -633,7 +656,9 @@ data class TransientSpec(
     /** 温度曲线：triangle 匀速升降温 / sine 余弦平滑升降温 */
     val profile: String = "triangle",
     /** 参与温度变化的杆件 id；null 表示全部杆件 */
-    val members: List<Int>? = null
+    val members: List<Int>? = null,
+    /** 案例埋点上下文（不参与求解，由 ChatSession 注入；JSON 键 _case_meta） */
+    @SerialName("_case_meta") val case_meta: CaseMeta? = null
 )
 
 /** 时间历程曲线（各数组等长，长度 = steps + 1） */
@@ -777,7 +802,9 @@ data class FlowModel(
     val density_kg_m3: Double? = null,
     /** 墙底摩擦系数（缺省 0.6） */
     val friction_coeff: Double? = null,
-    val mesh_level: String = "medium"
+    val mesh_level: String = "medium",
+    /** 案例埋点上下文（不参与求解，由 ChatSession 注入；JSON 键 _case_meta） */
+    @SerialName("_case_meta") val case_meta: CaseMeta? = null
 )
 
 /** 流场云图：节点/三角形/节点压力 + 流线折线 + 墙体轮廓 + 域范围 */
@@ -907,7 +934,9 @@ data class SeepageModel(
     val foundation_depth_m: Double? = null,
     /** 坝基摩擦系数（缺省 0.6） */
     val friction_coeff: Double? = null,
-    val mesh_level: String = "medium"
+    val mesh_level: String = "medium",
+    /** 案例埋点上下文（不参与求解，由 ChatSession 注入；JSON 键 _case_meta） */
+    @SerialName("_case_meta") val case_meta: CaseMeta? = null
 )
 
 /** 坝体规模信息（单宽指标，长度沿坝轴方向取 1 m） */
@@ -1056,7 +1085,9 @@ data class SolidWallModel(
     /** 网格档位：coarse | medium | fine | ultra | custom（自定义分段时由 mesh 决定） */
     val mesh_level: String = "medium",
     /** 显式分段（提供时优先于 mesh_level） */
-    val mesh: SolidMesh? = null
+    val mesh: SolidMesh? = null,
+    /** 案例埋点上下文（不参与求解，由 ChatSession 注入；JSON 键 _case_meta） */
+    @SerialName("_case_meta") val case_meta: CaseMeta? = null
 )
 
 /** 材料参数（求解实际采用值） */
@@ -1357,8 +1388,8 @@ data class SolidGenericModel(
     val loads: List<SolidGenericLoad> = emptyList(),
     /** 网格档位：coarse | medium | fine | ultra */
     val mesh_level: String = "medium",
-    /** 案例埋点用的用户上下文（不参与求解，由 ChatSession 注入，bridge 写入 case_log.jsonl） */
-    val case_meta: CaseMeta? = null,
+    /** 案例埋点用的用户上下文（不参与求解，由 ChatSession 注入，bridge 写入 case_log.jsonl；JSON 键 _case_meta） */
+    @SerialName("_case_meta") val case_meta: CaseMeta? = null,
     /** 显式长度单位声明（v1 仅支持 "m"，内部一律 SI 米）；缺省 "m"，AI 应显式输出 */
     val unit: String = "m"
 )
@@ -1531,8 +1562,8 @@ data class ShellVesselModel(
     val mesh_level: String = "medium",
     /** 网格分段覆盖（circle：n_circum/n_radial；rect：n_length/n_width/n_height） */
     val mesh: JsonElement? = null,
-    /** 案例埋点上下文（不参与求解，由 ChatSession 注入，bridge 写入 case_log.jsonl） */
-    val case_meta: CaseMeta? = null,
+    /** 案例埋点上下文（不参与求解，由 ChatSession 注入，bridge 写入 case_log.jsonl；JSON 键 _case_meta） */
+    @SerialName("_case_meta") val case_meta: CaseMeta? = null,
     /** 稳态热输入（壁厚温差）；null/缺失时不计温度应力 */
     val thermal: ShellThermalSpec? = null
 )
@@ -1588,8 +1619,8 @@ data class ShellBuriedPipeModel(
     val density_kg_m3: Double? = null,
     /** 强度覆盖（MPa），用于应力比校核 */
     val strength_MPa: Double? = null,
-    /** 案例埋点上下文（不参与求解，由 ChatSession 注入） */
-    val case_meta: CaseMeta? = null
+    /** 案例埋点上下文（不参与求解，由 ChatSession 注入；JSON 键 _case_meta） */
+    @SerialName("_case_meta") val case_meta: CaseMeta? = null
 )
 
 /** 埋地管验算结果渲染数据（Canvas 2D 用，单位 mm，圆心在原点） */

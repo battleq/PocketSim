@@ -72,6 +72,42 @@ def test_all_zero_loads_rejected():
         _cantilever([{"type": "udl", "member": 0, "qy": 0.0}])
 
 
+# --------------------------------------------------------------------- T2c
+def test_wind_load_matches_manual_equivalent_force():
+    """type=wind 源字段（P1-5）：代码侧按 F=cp·½ρv²·A 换算并均摊，
+    与手填等效集中力 fx 结果一致；beaufort 按蒲福表换算同一公式。"""
+    v, area, cp = 20.0, 0.06, 1.2
+    total = cp * 0.5 * 1.225 * v * v * area
+    wind = _cantilever([{"type": "wind", "nodes": [1], "wind_speed_m_s": v,
+                         "dir": "x", "area_m2": area}])
+    manual = _cantilever([{"type": "force", "node": 1, "fx": total, "fy": 0.0}])
+    assert wind["max_disp_mm"] == pytest.approx(manual["max_disp_mm"], rel=1e-9)
+    # 蒲福 8 级 = 20.7 m/s（flow.speed_from_beaufort 表值）
+    v8 = 20.7
+    b8 = _cantilever([{"type": "wind", "nodes": [1], "beaufort": 8,
+                       "dir": "x", "area_m2": area}])
+    manual8 = _cantilever([{"type": "force", "node": 1,
+                            "fx": cp * 0.5 * 1.225 * v8 * v8 * area,
+                            "fy": 0.0}])
+    assert b8["max_disp_mm"] == pytest.approx(manual8["max_disp_mm"], rel=1e-9)
+
+
+def test_wind_load_field_validation():
+    """风载字段校验：风速来源二选一 / 面积必填 / 节点存在性，全部硬拒绝。"""
+    with pytest.raises(ValueError, match="二选一"):
+        _cantilever([{"type": "wind", "nodes": [1], "wind_speed_m_s": 20,
+                      "beaufort": 8, "area_m2": 0.06}])
+    with pytest.raises(ValueError, match="缺少风速来源"):
+        _cantilever([{"type": "wind", "nodes": [1], "area_m2": 0.06}])
+    with pytest.raises(ValueError, match="area_m2"):
+        _cantilever([{"type": "wind", "nodes": [1], "wind_speed_m_s": 20}])
+    with pytest.raises(ValueError, match="不存在的节点"):
+        _cantilever([{"type": "wind", "nodes": [7], "wind_speed_m_s": 20,
+                      "area_m2": 0.06}])
+    with pytest.raises(ValueError, match="nodes"):
+        _cantilever([{"type": "wind", "wind_speed_m_s": 20, "area_m2": 0.06}])
+
+
 # --------------------------------------------------------------------- T3
 def test_simply_supported_mid_force():
     """简支跨中 98N（10kg），板截面 200×18：δ=PL³/48EI=1.531mm，M=PL/4。"""

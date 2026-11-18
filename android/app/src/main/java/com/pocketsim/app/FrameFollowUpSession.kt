@@ -64,7 +64,8 @@ class FrameFollowUpSession(
             )
         }
         append("\n\n当前模型（JSON，修改时以它为基准）：\n")
-        append(AppJson.encodeToString(FrameModel.serializer(), model))
+        // 案例埋点上下文（_case_meta）不进 LLM 提示词（规则 LOG-01 防泄露）
+        append(PromptJson.encodeToString(FrameModel.serializer(), model.copy(case_meta = null)))
         append("\n\n本次分析结果摘要：\n")
         append(
             buildString {
@@ -229,12 +230,16 @@ class FrameFollowUpSession(
                "欧标5050铝型材"（材料库内置空心截面 I/A，求解器自动按真实值算，避免实心矩形高估刚度）；
                截面尺寸填外形宽度（如 3030 型材 width_b=30, depth_h=30）；
                【载荷类型 type 必须且只能用 "force"（节点集中力）、"udl"（杆件均布）、
-               "area"（面荷载，按杆件长度自动分配为均布）或 "thermal"（杆件温度变化），
+               "area"（面荷载，按杆件长度自动分配为均布）、"wind"（风载源字段，代码换算）
+               或 "thermal"（杆件温度变化），
                禁止用 distributed/point/concentrated 等别名】：
                  - 集中力：{"type":"force","node":节点编号,"fx":0,"fy":-294,"mz":0}
                  - 均布：{"type":"udl","member":杆件编号,"qy":-0.5}
                  - 面荷载：{"type":"area","members":[杆件编号...],"total_N":-600}
                    （面状构件整面承重、作用宽度 ≥0.3 倍跨度时用；总重自动按杆件长度分配）
+                 - 风载：{"type":"wind","nodes":[迎风节点编号],"wind_speed_m_s":15,"dir":"x","area_m2":6.0}
+                   （wind_speed_m_s 与 beaufort 二选一；净风力 F=cp×½×1.225×v²×A 由代码换算，
+                    禁止自己心算成 fx）
                  - 温度：{"type":"thermal","member":杆件编号,"delta_temp":40}
                    （°C，升温为正、降温为负，基准 20°C；用户提到暴晒/结冰/采暖/热胀冷缩时加）
             3. 用户想改但信息不够（如"改重点"没说改成多少）：

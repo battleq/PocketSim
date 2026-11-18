@@ -126,6 +126,12 @@ object AiParser {
     const val MAX_SEMANTIC_RETRIES = 2
 
     /**
+     * parseFrameWithRetry 全局尝试上限（含首轮）：结构重试与语义重试叠加时
+     * 兜底，防止单次建模消耗过多 LLM 调用（P2-7）。
+     */
+    const val MAX_TOTAL_ATTEMPTS = 3
+
+    /**
      * AI 载荷类型别名归一化（宽松 → 合法 force/udl/area/thermal）。
      * LLM 偶尔用 "distributed" "point" "concentrated" 等别名，统一映射到内部合法值。
      * 原始值若已合规（force/udl/area/thermal）直接返回；非法值原样返回由下游校验抛错。
@@ -145,6 +151,9 @@ object AiParser {
         "surface" to "area",
         "panel" to "area",
         "areaload" to "area",
+        "windload" to "wind",
+        "风载" to "wind",
+        "风荷载" to "wind",
         "面荷载" to "area",
         "面载荷" to "area",
     )
@@ -504,7 +513,7 @@ object AiParser {
         }
         validateFrameModel(frame)
         val hasMechanical = frame.loads.any {
-            normalizeLoadType(it.type) in setOf("force", "udl", "area")
+            normalizeLoadType(it.type) in setOf("force", "udl", "area", "wind")
         }
         if (!hasMechanical) {
             throw AiParseException("[L-05] 时间历程需要至少一个恒定机械载荷（例如挂在杆端的重物）")
@@ -1716,7 +1725,7 @@ object AiParser {
                     if (ld.qx == 0.0 && ld.qy == 0.0 && ld.qz == 0.0) {
                         throw AiParseException(
                             "第 ${idx + 1} 条均布载荷的 qx/qy/qz 全为 0（没有载荷就不要写这条）；" +
-                                (if (!is3d) "水平风力请改用 force 节点集中力 fx。" else "")
+                                (if (!is3d) "水平风力请改用 type=wind 源字段（风速/风级+受风面积，代码自动换算）。" else "")
                         )
                     }
                     if (!is3d && (ld.qx != 0.0 || ld.qz != 0.0)) {
@@ -1745,6 +1754,31 @@ object AiParser {
                         )
                     }
                 }
+                "wind" -> {
+                    // 风载源字段校验（P1-5）：风速二选一 + 面积必填，动压换算公式在 Python 代码侧
+                    val windNids = ld.nodes.orEmpty()
+                    if (windNids.isEmpty()) {
+                        throw AiParseException("风载必须用 nodes 列出迎风节点 id（第 ${idx + 1} 条载荷）")
+                    }
+                    val windBad = windNids.filter { it !in nodeIds }
+                    if (windBad.isNotEmpty()) {
+                        throw AiParseException("风载引用了不存在的节点：${windBad.joinToString()}（第 ${idx + 1} 条载荷）")
+                    }
+                    if (ld.wind_speed_m_s != null && ld.beaufort != null) {
+                        throw AiParseException("[L-03] 风载风速来源冲突：wind_speed_m_s 与 beaufort 二选一（第 ${idx + 1} 条载荷）")
+                    }
+                    if (ld.wind_speed_m_s == null && ld.beaufort == null) {
+                        throw AiParseException("风载缺少风速来源：请给 wind_speed_m_s（m/s）或 beaufort（0~17 级）（第 ${idx + 1} 条载荷）")
+                    }
+                    if (ld.area_m2 <= 0.0) {
+                        throw AiParseException("风载必须提供受风投影面积 area_m2（m²，>0）（第 ${idx + 1} 条载荷）")
+                    }
+                    val wd = ld.dir.lowercase()
+                    val wDirs = if (is3d) setOf("x", "y", "z") else setOf("x", "y")
+                    if (wd !in wDirs) {
+                        throw AiParseException("风载方向 dir 只支持 ${wDirs.joinToString("/")}（第 ${idx + 1} 条载荷）")
+                    }
+                }
                 "thermal" -> {
                     val mid = ld.member
                     if (mid == null || m.members.none { it.id == mid }) {
@@ -1754,7 +1788,7 @@ object AiParser {
                         throw AiParseException("温度载荷 delta_temp 不能为 0（升温为正、降温为负，第 ${idx + 1} 条载荷）")
                     }
                 }
-                else -> throw AiParseException("载荷类型「${ld.type}」不支持（可用：force 节点集中力 / udl 杆件均布 / area 面荷载 / thermal 杆件温度变化）")
+                else -> throw AiParseException("载荷类型「${ld.type}」不支持（可用：force 节点集中力 / udl 杆件均布 / area 面荷载 / wind 风载 / thermal 杆件温度变化）")
             }
         }
     }
@@ -1838,7 +1872,9 @@ object AiParser {
      *    给带合法取值的确定性修改单，最多重试 [MAX_SEMANTIC_RETRIES] 次，
      *    耗尽后抛 [AiRetryExhaustedException]（含总尝试次数、首轮错误，供埋点）；
      *  - 结构/契约错误重试后仍失败：原样抛出最后一个异常（AiParseException/
-     *    AiContractException），保留错误类型，便于上层区分处理。
+     *    AiContractException），保留错误类型，便于上层区分处理；
+     *  - 两类重试叠加时受全局上限 [MAX_TOTAL_ATTEMPTS]（含首轮）兜底，
+     *    达到上限后不再重试、按当前错误类型抛出（P2-7）。
      */
     suspend fun parseFrameWithRetry(
         client: AiClient,
@@ -1921,7 +1957,8 @@ object AiParser {
             if (firstError == null) firstError = e.message?.take(300)
             when {
                 // 语义错误：确定性修改单（错误信息里含实际边界与合法取值），定点改后重发
-                e is AiSemanticException && semanticRetries < MAX_SEMANTIC_RETRIES -> {
+                e is AiSemanticException && semanticRetries < MAX_SEMANTIC_RETRIES &&
+                    attempts < MAX_TOTAL_ATTEMPTS -> {
                     semanticRetries++
                     conversation = conversation + LlmMessage(
                         role = "user",
@@ -1930,8 +1967,8 @@ object AiParser {
                             "重新输出完整 JSON 对象（不要解释、不要代码围栏）。"
                     )
                 }
-                // 结构/契约错误：给完整格式示例，仅重试 1 次
-                e !is AiSemanticException && !structuralRetried -> {
+                // 结构/契约错误：给完整格式示例，仅重试 1 次（且受全局上限约束）
+                e !is AiSemanticException && !structuralRetried && attempts < MAX_TOTAL_ATTEMPTS -> {
                     structuralRetried = true
                     val reason = when (e) {
                         is AiContractException -> "你上一条回复不符合当前模式：${e.message}"

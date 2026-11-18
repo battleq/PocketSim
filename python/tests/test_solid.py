@@ -124,6 +124,29 @@ def test_pure_bending_matches_beam_theory():
     assert abs(u[tips, 1].mean()) == pytest.approx(M * L ** 2 / (2 * E * I), rel=0.10)
 
 
+def test_solve_solid_returns_balanced_moment():
+    """solve_solid 输出对质心的合力矩（P2-6 平衡校核口径）：纯弯载荷合力 ≈ 0
+    但力矩 ≈ ±M；外力矩与支反力矩应相互抵消（残差远小于力矩量级）。"""
+    nx, ny, nz = 6, 8, 4
+    L, H, T = 1.0, 0.4, 0.4
+    M = 100.0
+    I = T * H ** 3 / 12.0
+    nodes, tets = solid.build_box_mesh(nx, ny, nz, L, H, T)
+    faces = solid.boundary_faces(tets)
+    end_faces = solid.faces_on_plane(nodes, faces, 0, L)
+    fixed = solid.fixed_dofs(nodes, solid.nodes_on_plane(nodes, 0, 0.0))
+
+    result = solid.solve_solid(
+        nodes, tets, E=2.0e9, nu=0.0, fixed=fixed,
+        face_loads=[{"faces": end_faces,
+                     "traction_fn": lambda p: np.array([M * (p[1] - 0.5 * H) / I, 0.0, 0.0])}],
+    )
+    assert np.linalg.norm(result["applied_force"]) < 1e-6
+    assert abs(result["applied_moment"][2]) == pytest.approx(M, rel=0.05)
+    resid = float(np.linalg.norm(result["applied_moment"] + result["reaction_moment"]))
+    assert resid < 0.01 * abs(result["applied_moment"][2])
+
+
 def test_rigid_body_motion_zero_strain():
     """微小刚体转动 + 平移：单元应变恒为 0（B 矩阵一致性）。"""
     nodes, tets = solid.build_box_mesh(3, 3, 3, 1.0, 1.0, 1.0)
@@ -863,6 +886,39 @@ def test_wind_speed_out_of_range_rejected():
         solid.run_solid_generic(_base_unit_conv_model({
             "type": "pressure", "face": {"axis": "x", "value": 1.0},
             "wind_speed_m_s": 0.1,
+        }))
+
+
+def test_pressure_multiple_sources_rejected():
+    """L-03：pressure 同时给多个量级来源 → 拒绝（五选一，与 Kotlin 镜像）。"""
+    with pytest.raises(ValueError, match="L-03"):
+        solid.run_solid_generic(_base_unit_conv_model({
+            "type": "pressure", "face": {"axis": "x", "value": 1.0},
+            "magnitude": 1e5, "wind_speed_m_s": 20.0,
+        }))
+    with pytest.raises(ValueError, match="L-03"):
+        solid.run_solid_generic(_base_unit_conv_model({
+            "type": "pressure", "face": {"axis": "y", "value": 0.3},
+            "mass_kg": 100.0, "area_m2": 0.09, "depth_m": 0.4,
+        }))
+
+
+def test_pressure_fluid_without_depth_rejected():
+    """L-04：fluid 必须配 depth_m，否则拒绝（防止 fluid 被静默忽略）。"""
+    with pytest.raises(ValueError, match="L-04"):
+        solid.run_solid_generic(_base_unit_conv_model({
+            "type": "pressure", "face": {"axis": "x", "value": 1.0},
+            "magnitude": 1e5, "fluid": "water",
+        }))
+
+
+def test_force_vector_and_mass_conflict_rejected():
+    """L-03：force 同时给 vector 和 mass_kg+direction → 拒绝（二选一）。"""
+    with pytest.raises(ValueError, match="L-03"):
+        solid.run_solid_generic(_base_unit_conv_model({
+            "type": "force", "point": [1.0, 0.15, 0.15],
+            "vector": [0.0, -980.0, 0.0],
+            "mass_kg": 100.0, "direction": [0.0, -1.0, 0.0],
         }))
 
 

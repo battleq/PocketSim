@@ -826,6 +826,17 @@ def solve_solid(
     reaction_force = np.array(
         [float(reactions[comp == i].sum()) for i in range(3)]
     )
+    # 合力矩（P2-6 平衡校核）：对质心取矩。内力阵 Ku 自平衡（K 的行向量与刚体
+    # 模态正交 ⇒ 对任意位移场 Ku 的合力矩为 0），因此 applied_moment +
+    # reaction_moment 应 ≈ 0，残差反映求解误差/模型问题。纯温度等自平衡载荷
+    # 两侧力矩都 ≈ 0，调用端按相对阈值校核时天然豁免。
+    centroid = nodes.mean(axis=0)
+    applied_moment = np.cross(nodes - centroid, f.reshape(-1, 3)).sum(axis=0)
+    reactions_full = np.zeros(n_dof)
+    reactions_full[fixed] = reactions
+    reaction_moment = np.cross(
+        nodes - centroid, reactions_full.reshape(-1, 3)
+    ).sum(axis=0)
 
     return {
         "u": u,
@@ -837,6 +848,8 @@ def solve_solid(
         "f": f,
         "applied_force": applied,
         "reaction_force": reaction_force,
+        "applied_moment": applied_moment,
+        "reaction_moment": reaction_moment,
         "dof": int(n_dof),
         "n_elements": int(len(tets)),
         "n_vertices": int(len(nodes)),
@@ -1910,9 +1923,30 @@ def _parse_supports(
 def _resolve_pressure_magnitude(ld: Dict[str, Any]) -> Tuple[float, str]:
     """由确定性源字段计算压力 magnitude（Pa），返回 (magnitude, 换算说明)。
 
-    优先级：风速/风级 > 质量/面积 > 流体深度 > 直接 magnitude。
+    量级来源五选一互斥（L-03，与 Kotlin AiParser 校验镜像）：
+    magnitude / wind_speed_m_s / beaufort / mass_kg / depth_m。
+    同时提供多个来源时拒绝（而不是静默按优先级取值产生歧义）。
     原始输入不被改写，换算说明用于在预览/结果中向用户展示换算过程。
     """
+    sources: List[str] = []
+    mag_raw = ld.get("magnitude")
+    if mag_raw is not None and float(mag_raw) > 0.0:
+        sources.append("magnitude")
+    for key in ("wind_speed_m_s", "beaufort", "mass_kg", "depth_m"):
+        if ld.get(key) is not None:
+            sources.append(key)
+    if len(sources) > 1:
+        raise ValueError(
+            f"[L-03] pressure 载荷量级来源冲突：同时填了 {'、'.join(sources)}，"
+            "只能五选一（magnitude / wind_speed_m_s / beaufort / mass_kg / depth_m），"
+            "请删除多余的来源"
+        )
+    # L-04：fluid 表示静水/土压力类型，必须配 depth_m 才会换算压强
+    if ld.get("fluid") is not None and ld.get("depth_m") is None:
+        raise ValueError(
+            f"[L-04] pressure 载荷分布非法：fluid=\"{ld.get('fluid')}\" 表示静水/土压力，"
+            "必须配 depth_m（水深/土深，m）才能换算压强，请补上 depth_m 或去掉 fluid"
+        )
     speed = ld.get("wind_speed_m_s")
     beaufort = ld.get("beaufort")
     cp_net = float(ld.get("cp_net") or CP_NET)
@@ -2097,6 +2131,19 @@ def _parse_loads(
                 raise ValueError(
                     f'第 {idx + 1} 个 force 载荷需提供 point_at'
                     f'（如 ["center","max","center"]，推荐）或 point=[x,y,z]'
+                )
+            # 集中力来源二选一互斥（L-03，与 Kotlin AiParser 校验镜像）：
+            # vector(N) 或 mass_kg+direction，同时提供时拒绝而不是静默覆盖
+            has_vec = isinstance(vector, (list, tuple)) and len(vector) == 3
+            has_mass = (
+                mass is not None
+                and isinstance(direction, (list, tuple))
+                and len(direction) == 3
+            )
+            if has_vec and has_mass:
+                raise ValueError(
+                    f"[L-03] 第 {idx + 1} 个 force 载荷量级来源冲突：同时填了 vector 和 "
+                    "mass_kg+direction，只能二选一，请删除多余的来源"
                 )
             # 质量→重力：需 direction（单位向量）指明受力方向；否则用 vector（N）。
             src_desc = "集中力"
@@ -2356,10 +2403,14 @@ def run_solid_generic(
     sig = solved["sigma"]
     reaction_force = solved["reaction_force"]
     applied_force = np.asarray(solved["applied_force"], dtype=float)
+    applied_moment = np.asarray(solved["applied_moment"], dtype=float)
+    reaction_moment = np.asarray(solved["reaction_moment"], dtype=float)
     if solved_alt is not None:
         u = 0.5 * (u + solved_alt["u"])
         reaction_force = 0.5 * (reaction_force + solved_alt["reaction_force"])
         applied_force = 0.5 * (applied_force + solved_alt["applied_force"])
+        applied_moment = 0.5 * (applied_moment + solved_alt["applied_moment"])
+        reaction_moment = 0.5 * (reaction_moment + solved_alt["reaction_moment"])
 
     # ---- 解的有效性校验（P0-2 兜底） ----
     # 1) 数值有效性：欠约束/奇异矩阵时 spsolve 返回 nan/inf
@@ -2388,6 +2439,20 @@ def run_solid_generic(
             f"静力不平衡：外载合力 {applied_force.tolist()} N，"
             f"支反力合力 {reaction_force.tolist()} N，"
             f"相对残差 {equilibrium_ratio:.2%}（>5%），请检查约束与载荷设置"
+        )
+    # 4) 合力矩平衡校核（P2-6）：对质心的外力矩与支反力矩应相互抵消。
+    #    分母取 max(外力矩, 合力×对角线长度)：纯温度等自平衡载荷两侧都 ≈0，
+    #    残差落到绝对下限 → 天然豁免，不误报。
+    moment_resid = float(np.linalg.norm(applied_moment + reaction_moment))
+    moment_scale = max(
+        float(np.linalg.norm(applied_moment)), applied_norm * diag, 1e-12
+    )
+    moment_ratio = moment_resid / moment_scale
+    if moment_ratio > 0.05:
+        raise ValueError(
+            f"力矩不平衡：外载合力矩 {applied_moment.tolist()} N·m，"
+            f"支反力合力矩 {reaction_moment.tolist()} N·m，"
+            f"相对残差 {moment_ratio:.2%}（>5%），请检查约束与载荷设置"
         )
 
     # ---- 通用后处理 ----

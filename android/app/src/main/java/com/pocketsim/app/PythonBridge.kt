@@ -161,7 +161,7 @@ class ChaquopyEngine(private val context: Context) : FeaEngine, ProblemParser {
     override suspend fun runScenario(request: ScenarioRequest): FeaResult = withContext(Dispatchers.Default) {
         val requestJson = AppJson.encodeToString(ScenarioRequest.serializer(), request)
         val json = pyCall { py ->
-            py.getModule("pocketsim.bridge").callAttr("run_scenario", requestJson).toString()
+            py.getModule("pocketsim.bridge").callAttr("run_scenario", requestJson, caseLogTag()).toString()
         }
         AppJson.decodeFromString(FeaResult.serializer(), json)
     }
@@ -171,7 +171,7 @@ class ChaquopyEngine(private val context: Context) : FeaEngine, ProblemParser {
         // dim=3 走空间梁求解器（run_frame3d）；平面模型保持 run_frame 原路径，行为不变
         val fn = if (model.dim == 3) "run_frame3d" else "run_frame"
         val json = pyCall { py ->
-            py.getModule("pocketsim.bridge").callAttr(fn, modelJson, dataDir(), lang(), unitsTag()).toString()
+            py.getModule("pocketsim.bridge").callAttr(fn, modelJson, dataDir(), lang(), unitsTag(), caseLogTag()).toString()
         }
         AppJson.decodeFromString(FrameResult.serializer(), json)
     }
@@ -192,7 +192,7 @@ class ChaquopyEngine(private val context: Context) : FeaEngine, ProblemParser {
     override suspend fun runFlow(model: FlowModel): FlowResult = withContext(Dispatchers.Default) {
         val modelJson = AppJson.encodeToString(FlowModel.serializer(), model)
         val json = pyCall { py ->
-            py.getModule("pocketsim.bridge").callAttr("run_flow", modelJson, dataDir(), lang(), unitsTag()).toString()
+            py.getModule("pocketsim.bridge").callAttr("run_flow", modelJson, dataDir(), lang(), unitsTag(), caseLogTag()).toString()
         }
         AppJson.decodeFromString(FlowResult.serializer(), json)
     }
@@ -200,7 +200,7 @@ class ChaquopyEngine(private val context: Context) : FeaEngine, ProblemParser {
     override suspend fun runSeepage(model: SeepageModel): SeepageResult = withContext(Dispatchers.Default) {
         val modelJson = AppJson.encodeToString(SeepageModel.serializer(), model)
         val json = pyCall { py ->
-            py.getModule("pocketsim.bridge").callAttr("run_seepage", modelJson, dataDir(), lang(), unitsTag()).toString()
+            py.getModule("pocketsim.bridge").callAttr("run_seepage", modelJson, dataDir(), lang(), unitsTag(), caseLogTag()).toString()
         }
         AppJson.decodeFromString(SeepageResult.serializer(), json)
     }
@@ -208,7 +208,7 @@ class ChaquopyEngine(private val context: Context) : FeaEngine, ProblemParser {
     override suspend fun runTransient(spec: TransientSpec): TransientResult = withContext(Dispatchers.Default) {
         val specJson = AppJson.encodeToString(TransientSpec.serializer(), spec)
         val json = pyCall { py ->
-            py.getModule("pocketsim.bridge").callAttr("run_transient", specJson, dataDir(), lang(), unitsTag()).toString()
+            py.getModule("pocketsim.bridge").callAttr("run_transient", specJson, dataDir(), lang(), unitsTag(), caseLogTag()).toString()
         }
         AppJson.decodeFromString(TransientResult.serializer(), json)
     }
@@ -216,7 +216,7 @@ class ChaquopyEngine(private val context: Context) : FeaEngine, ProblemParser {
     override suspend fun runSolid(model: SolidWallModel): SolidResult = withContext(Dispatchers.Default) {
         val modelJson = AppJson.encodeToString(SolidWallModel.serializer(), model)
         val json = pyCall { py ->
-            py.getModule("pocketsim.bridge").callAttr("run_solid", modelJson, dataDir(), lang(), unitsTag()).toString()
+            py.getModule("pocketsim.bridge").callAttr("run_solid", modelJson, dataDir(), lang(), unitsTag(), caseLogTag()).toString()
         }
         AppJson.decodeFromString(SolidResult.serializer(), json)
     }

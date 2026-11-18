@@ -68,6 +68,7 @@ import com.pocketsim.app.AppContainer
 import com.pocketsim.app.LocaleManager
 import com.pocketsim.app.LocaleStore
 import com.pocketsim.app.MaterialRecord
+import com.pocketsim.app.MaterialValidation
 import com.pocketsim.app.Quantity
 import com.pocketsim.app.R
 import com.pocketsim.app.Units
@@ -115,6 +116,9 @@ fun MaterialLibraryScreen(
     val nameRequiredMsg = stringResource(R.string.material_name_required)
     val eRequiredMsg = stringResource(R.string.material_e_required)
     val nuRequiredMsg = stringResource(R.string.material_nu_required)
+    val densityRequiredMsg = stringResource(R.string.material_density_required)
+    val strengthRequiredMsg = stringResource(R.string.material_strength_required)
+    val saveFailFmt = stringResource(R.string.material_save_fail)
     val categoryDefault = stringResource(R.string.material_category_custom)
     val strengthTypeDefault = stringResource(R.string.material_strength_unknown)
     val deletedFmt = stringResource(R.string.material_deleted)
@@ -307,28 +311,42 @@ fun MaterialLibraryScreen(
                             val name = customName.trim()
                             val e = customE.trim().toDoubleOrNull()
                             val nu = customNu.trim().toDoubleOrNull()
+                            val density = customDensity.trim().toDoubleOrNull()
+                            val strength = customStrength.trim().toDoubleOrNull()
                             if (name.isBlank()) { statusMsg = nameRequiredMsg; return@OutlinedButton }
                             if (e == null) { statusMsg = eRequiredMsg; return@OutlinedButton }
                             if (nu == null) { statusMsg = nuRequiredMsg; return@OutlinedButton }
+                            if (density == null) { statusMsg = densityRequiredMsg; return@OutlinedButton }
+                            if (strength == null) { statusMsg = strengthRequiredMsg; return@OutlinedButton }
                             val rec = MaterialRecord(
                                 id = name,
                                 name = name,
                                 category = customCategory.trim().ifBlank { categoryDefault },
                                 eMPa = Units.toMPa(e),
                                 nu = nu,
-                                density_kg_m3 = customDensity.trim().toDoubleOrNull()?.let { Units.toKgPerM3(it) },
-                                strength_MPa = customStrength.trim().toDoubleOrNull()?.let { Units.toMPa(it) },
+                                density_kg_m3 = Units.toKgPerM3(density),
+                                strength_MPa = Units.toMPa(strength),
                                 strength_type = customStrengthType.trim().ifBlank { strengthTypeDefault },
                                 notes = customNotes.trim(),
                                 source = "user"
                             )
+                            // MAT-01：与联网检索同一套数值范围校验，非法值拒绝入库
+                            val invalid = runCatching { MaterialValidation.validate(rec, englishUi) }.exceptionOrNull()
+                            if (invalid != null) {
+                                statusMsg = invalid.message ?: saveFailFmt.format("")
+                                return@OutlinedButton
+                            }
                             scope.launch {
-                                container.engine.upsertMaterial(rec)
-                                statusMsg = "$savedLabel：$name"
-                                refresh()
-                                customName = ""; customCategory = ""; customE = ""
-                                customNu = ""; customDensity = ""; customStrength = ""
-                                customStrengthType = ""; customNotes = ""
+                                try {
+                                    container.engine.upsertMaterial(rec)
+                                    statusMsg = "$savedLabel：$name"
+                                    refresh()
+                                    customName = ""; customCategory = ""; customE = ""
+                                    customNu = ""; customDensity = ""; customStrength = ""
+                                    customStrengthType = ""; customNotes = ""
+                                } catch (e: Exception) {
+                                    statusMsg = saveFailFmt.format(e.message ?: context.getString(R.string.error_unknown_default))
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxWidth()

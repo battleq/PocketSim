@@ -211,6 +211,8 @@
     <string name="frame_load_force_fmt">节点 %1$d 集中力 %2$s</string>
     <string name="frame_load_moment_fmt">节点 %1$d 力偶 %2$s</string>
     <string name="frame_load_udl_fmt">杆件 %1$d 均布 %2$s</string>
+    <string name="frame_load_wind_fmt">风载 %1$s，受风面积 %2$s m²，方向 %3$s</string>
+    <string name="frame_load_beaufort_fmt">%1$d 级风</string>
     <string name="frame_load_area_fmt">面荷载：%1$d 根杆件共 %2$s</string>
     <string name="frame_load_thermal_fmt">杆件 %1$d 温度变化 %2$s°C</string>
     <string name="frame_btn_run">开始计算</string>
@@ -329,6 +331,9 @@
     <string name="material_name_required">请填写材料名称</string>
     <string name="material_e_required">请填写弹性模量</string>
     <string name="material_nu_required">请填写泊松比</string>
+    <string name="material_density_required">请填写密度</string>
+    <string name="material_strength_required">请填写强度代表值</string>
+    <string name="material_save_fail">保存失败：%1$s</string>
     <string name="material_list_empty">暂无自定义或联网材料，内置材料在求解时自动匹配</string>
     <string name="home_material_entry">材料库</string>
 

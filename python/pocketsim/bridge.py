@@ -228,12 +228,50 @@ def _to_fea_result(r: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _run_with_case_log(solve, model: Dict[str, Any], data_dir: str,
+                       logging_on: bool, meta: Dict[str, Any]) -> Dict[str, Any]:
+    """统一案例埋点包装（规则 LOG-01：全部求解入口共用，成功/失败都记录）。
+
+    仅 logging_on（调试包 case_log_enabled="1"）时写 {data_dir}/case_log.jsonl；
+    埋点自身失败绝不影响主流程。meta 为从 model._case_meta 弹出的用户上下文。
+    solve 为无参闭包，返回求解结果 dict（含 ok 字段）。
+    """
+    from . import case_log
+    user_text = str(meta.get("user_text") or "")
+    session_id = str(meta.get("session_id") or "")
+    input_form = str(meta.get("input_form") or "text")
+
+    def _append(result, error, detected):
+        if not logging_on:
+            return
+        try:
+            rec = case_log.build_record(
+                model=model, result=result, error=error,
+                user_text=user_text, session_id=session_id,
+                input_form=input_form, stage="solve", detected=detected,
+                data_dir=str(data_dir),
+            )
+            case_log.append_case_log(str(data_dir), rec)
+        except Exception:
+            pass  # 埋点失败不能影响主流程
+
+    try:
+        result = solve()
+    except Exception as exc:
+        # 求解失败也埋点：错误信息即失败现象，detected=False（求解才暴露）
+        _append(None, str(exc), False)
+        raise
+    _append(result, None, None)
+    return result
+
+
 @_friendly_errors("仿真")
-def run_scenario(request_json: str) -> str:
+def run_scenario(request_json: str, case_log_enabled: str = "0") -> str:
     """执行一次求解（Kotlin ScenarioRequest JSON 入，FeaResult JSON 出）。
 
     engine 返回 {"ok": false} 时抛 ValueError——Chaquopy 侧表现为 PyException，
     Kotlin 统一转 FeaEngineException 向用户展示中文错误信息。
+    案例埋点开关与 run_solid_generic 一致（case_log_enabled="1" 才写）。
     """
     try:
         req = json.loads(request_json)
@@ -246,31 +284,42 @@ def run_scenario(request_json: str) -> str:
     params = dict(req.get("params") or {})
     mesh_level = str(req.get("mesh_level") or "medium")
     data_dir = req.get("data_dir")
+    meta = req.pop("_case_meta", None) or {}
 
     # 联网检索缓存材料位于 App 私有目录：先切换默认库数据目录再解析材料名
     if data_dir:
         set_default_data_dir(str(data_dir))
 
-    result = engine.run_scenario(
-        template_id, _coerce_params(template_id, params), mesh_level=mesh_level
+    def _solve():
+        result = engine.run_scenario(
+            template_id, _coerce_params(template_id, params), mesh_level=mesh_level
+        )
+        if not result.get("ok"):
+            if result.get("need_material_lookup"):
+                raise ValueError(
+                    f"材料库中未找到“{result['need_material_lookup']}”："
+                    f"请通过联网检索补全材料参数后重试"
+                )
+            raise ValueError("；".join(result.get("errors", ["求解失败"])))
+        return result
+
+    log_model = {"template_id": template_id, "params": params,
+                 "mesh_level": mesh_level}
+    result = _run_with_case_log(
+        _solve, log_model, str(data_dir or ""), case_log_enabled == "1", meta
     )
-    if not result.get("ok"):
-        if result.get("need_material_lookup"):
-            raise ValueError(
-                f"材料库中未找到“{result['need_material_lookup']}”："
-                f"请通过联网检索补全材料参数后重试"
-            )
-        raise ValueError("；".join(result.get("errors", ["求解失败"])))
     return _dumps(_to_fea_result(result))
 
 
 # ---------------------------------------------------------------------- 框架求解
 @_friendly_errors("梁杆框架")
-def run_frame(model_json: str, data_dir: str = "", lang: str = "zh", units: str = "metric") -> str:
+def run_frame(model_json: str, data_dir: str = "", lang: str = "zh",
+              units: str = "metric", case_log_enabled: str = "0") -> str:
     """2D 梁杆框架求解（Kotlin FrameModel JSON 入，FrameResult JSON 出）。
 
     frame.run_frame 校验/求解失败抛 ValueError（与 run_scenario 同一错误通道）。
     返回结构与 Kotlin FrameResult 字段一一对应：指标、杆件结果、变形折线、通俗叙述。
+    案例埋点开关与 run_solid_generic 一致（case_log_enabled="1" 才写）。
     """
     from . import frame as frame_mod
     set_locale(lang, units)
@@ -282,17 +331,23 @@ def run_frame(model_json: str, data_dir: str = "", lang: str = "zh", units: str 
     if not isinstance(model, dict):
         raise ValueError("框架模型必须是 JSON 对象")
 
+    meta = model.pop("_case_meta", None) or {}
     lib = MaterialsLibrary(data_dir=str(data_dir) if data_dir else None)
-    result = frame_mod.run_frame(model, library=lib)
+    result = _run_with_case_log(
+        lambda: frame_mod.run_frame(model, library=lib),
+        model, str(data_dir), case_log_enabled == "1", meta,
+    )
     return _dumps(result)
 
 
 @_friendly_errors("风荷载墙体")
-def run_flow(model_json: str, data_dir: str = "", lang: str = "zh", units: str = "metric") -> str:
+def run_flow(model_json: str, data_dir: str = "", lang: str = "zh",
+             units: str = "metric", case_log_enabled: str = "0") -> str:
     """风荷载墙体流体仿真（Kotlin FlowModel JSON 入，FlowResult JSON 出）。
 
     势流有限元给出压力云图与流线，结构侧按规范体型系数做抗倾覆/抗滑移/抗弯校核。
     校验或求解失败抛 ValueError（与其它求解同一错误通道）。
+    案例埋点开关与 run_solid_generic 一致（case_log_enabled="1" 才写）。
     """
     from . import flow as flow_mod
     set_locale(lang, units)
@@ -304,17 +359,23 @@ def run_flow(model_json: str, data_dir: str = "", lang: str = "zh", units: str =
     if not isinstance(model, dict):
         raise ValueError("流体模型必须是 JSON 对象")
 
+    meta = model.pop("_case_meta", None) or {}
     lib = MaterialsLibrary(data_dir=str(data_dir) if data_dir else None)
-    result = flow_mod.run_flow(model, library=lib)
+    result = _run_with_case_log(
+        lambda: flow_mod.run_flow(model, library=lib),
+        model, str(data_dir), case_log_enabled == "1", meta,
+    )
     return _dumps(result)
 
 
 @_friendly_errors("渗流")
-def run_seepage(model_json: str, data_dir: str = "", lang: str = "zh", units: str = "metric") -> str:
+def run_seepage(model_json: str, data_dir: str = "", lang: str = "zh",
+                units: str = "metric", case_log_enabled: str = "0") -> str:
     """大坝坝基渗流有限元（Kotlin SeepageModel JSON 入，SeepageResult JSON 出）。
 
     二维稳态达西渗流给出坝基水头场/渗流线、扬压力、单宽渗流量与出逸比降，
     再做抗滑/抗倾覆/抗管涌校核。校验或求解失败抛 ValueError。
+    案例埋点开关与 run_solid_generic 一致（case_log_enabled="1" 才写）。
     """
     from . import seepage as seepage_mod
     set_locale(lang, units)
@@ -326,17 +387,23 @@ def run_seepage(model_json: str, data_dir: str = "", lang: str = "zh", units: st
     if not isinstance(model, dict):
         raise ValueError("渗流模型必须是 JSON 对象")
 
+    meta = model.pop("_case_meta", None) or {}
     lib = MaterialsLibrary(data_dir=str(data_dir) if data_dir else None)
-    result = seepage_mod.run_seepage(model, library=lib)
+    result = _run_with_case_log(
+        lambda: seepage_mod.run_seepage(model, library=lib),
+        model, str(data_dir), case_log_enabled == "1", meta,
+    )
     return _dumps(result)
 
 
 @_friendly_errors("三维实体")
-def run_solid(model_json: str, data_dir: str = "", lang: str = "zh", units: str = "metric") -> str:
+def run_solid(model_json: str, data_dir: str = "", lang: str = "zh",
+              units: str = "metric", case_log_enabled: str = "0") -> str:
     """三维实体线弹性求解（外部 JSON 入，SolidResult JSON 出）。
 
     当前支持参数化墙体在风压（或直接均布压力）与自重下的三维实体计算，
     输出位移/应力/安全系数与逐节点渲染数据。校验或求解失败抛 ValueError。
+    案例埋点开关与 run_solid_generic 一致（case_log_enabled="1" 才写）。
     """
     from . import solid as solid_mod
     set_locale(lang, units)
@@ -348,8 +415,12 @@ def run_solid(model_json: str, data_dir: str = "", lang: str = "zh", units: str 
     if not isinstance(model, dict):
         raise ValueError("实体模型必须是 JSON 对象")
 
+    meta = model.pop("_case_meta", None) or {}
     lib = MaterialsLibrary(data_dir=str(data_dir) if data_dir else None)
-    result = solid_mod.run_solid(model, library=lib)
+    result = _run_with_case_log(
+        lambda: solid_mod.run_solid(model, library=lib),
+        model, str(data_dir), case_log_enabled == "1", meta,
+    )
     return _dumps(result)
 
 
@@ -367,10 +438,7 @@ def run_solid_generic(model_json: str, data_dir: str = "", lang: str = "zh",
     在此弹出，避免泄漏给求解器。
     """
     from . import solid as solid_mod
-    from . import case_log
     set_locale(lang, units)
-
-    logging_on = case_log_enabled == "1"
 
     try:
         model = json.loads(model_json)
@@ -382,39 +450,11 @@ def run_solid_generic(model_json: str, data_dir: str = "", lang: str = "zh",
     # 用户上下文（Kotlin 侧在调用前注入到 _case_meta，求解器不读取）；
     # 即使埋点关闭也要弹出，避免污染下游求解模型
     meta = model.pop("_case_meta", None) or {}
-    user_text = str(meta.get("user_text") or "")
-    session_id = str(meta.get("session_id") or "")
-    input_form = str(meta.get("input_form") or "text")
-
     lib = MaterialsLibrary(data_dir=str(data_dir) if data_dir else None)
-    try:
-        result = solid_mod.run_solid_generic(model, library=lib)
-    except Exception as exc:
-        # 求解失败也埋点：错误信息即失败现象，detected=False（求解才暴露）
-        if logging_on:
-            try:
-                rec = case_log.build_record(
-                    model=model, result=None, error=str(exc),
-                    user_text=user_text, session_id=session_id,
-                    input_form=input_form, stage="solve", detected=False,
-                    data_dir=str(data_dir),
-                )
-                case_log.append_case_log(str(data_dir), rec)
-            except Exception:
-                pass  # 埋点失败不能影响主流程错误抛出
-        raise
-    # 成功埋点
-    if logging_on:
-        try:
-            rec = case_log.build_record(
-                model=model, result=result, error=None,
-                user_text=user_text, session_id=session_id,
-                input_form=input_form, stage="solve", detected=None,
-                data_dir=str(data_dir),
-            )
-            case_log.append_case_log(str(data_dir), rec)
-        except Exception:
-            pass
+    result = _run_with_case_log(
+        lambda: solid_mod.run_solid_generic(model, library=lib),
+        model, str(data_dir), case_log_enabled == "1", meta,
+    )
     return _dumps(result)
 
 
@@ -432,10 +472,7 @@ def run_shell(model_json: str, data_dir: str = "", lang: str = "zh",
     run_solid_generic 一致。
     """
     from . import shell as shell_mod
-    from . import case_log
     set_locale(lang, units)
-
-    logging_on = case_log_enabled == "1"
 
     try:
         model = json.loads(model_json)
@@ -445,37 +482,11 @@ def run_shell(model_json: str, data_dir: str = "", lang: str = "zh",
         raise ValueError("壳体模型必须是 JSON 对象")
 
     meta = model.pop("_case_meta", None) or {}
-    user_text = str(meta.get("user_text") or "")
-    session_id = str(meta.get("session_id") or "")
-    input_form = str(meta.get("input_form") or "text")
-
     lib = MaterialsLibrary(data_dir=str(data_dir) if data_dir else None)
-    try:
-        result = shell_mod.run_vessel(model, library=lib)
-    except Exception as exc:
-        if logging_on:
-            try:
-                rec = case_log.build_record(
-                    model=model, result=None, error=str(exc),
-                    user_text=user_text, session_id=session_id,
-                    input_form=input_form, stage="solve", detected=False,
-                    data_dir=str(data_dir),
-                )
-                case_log.append_case_log(str(data_dir), rec)
-            except Exception:
-                pass
-        raise
-    if logging_on:
-        try:
-            rec = case_log.build_record(
-                model=model, result=result, error=None,
-                user_text=user_text, session_id=session_id,
-                input_form=input_form, stage="solve", detected=None,
-                data_dir=str(data_dir),
-            )
-            case_log.append_case_log(str(data_dir), rec)
-        except Exception:
-            pass
+    result = _run_with_case_log(
+        lambda: shell_mod.run_vessel(model, library=lib),
+        model, str(data_dir), case_log_enabled == "1", meta,
+    )
     return _dumps(result)
 
 
@@ -487,10 +498,8 @@ def run_buried_pipe(model_json: str, data_dir: str = "",
     案例埋点与 run_shell 一致。
     """
     from . import buried_pipe
-    from . import case_log
     set_locale(lang, units)
 
-    logging_on = case_log_enabled == "1"
     try:
         model = json.loads(model_json)
     except json.JSONDecodeError as exc:
@@ -499,37 +508,11 @@ def run_buried_pipe(model_json: str, data_dir: str = "",
         raise ValueError("埋地管模型必须是 JSON 对象")
 
     meta = model.pop("_case_meta", None) or {}
-    user_text = str(meta.get("user_text") or "")
-    session_id = str(meta.get("session_id") or "")
-    input_form = str(meta.get("input_form") or "text")
-
     lib = MaterialsLibrary(data_dir=str(data_dir) if data_dir else None)
-    try:
-        result = buried_pipe.run_buried_pipe(model, library=lib)
-    except Exception as exc:
-        if logging_on:
-            try:
-                rec = case_log.build_record(
-                    model=model, result=None, error=str(exc),
-                    user_text=user_text, session_id=session_id,
-                    input_form=input_form, stage="solve", detected=False,
-                    data_dir=str(data_dir),
-                )
-                case_log.append_case_log(str(data_dir), rec)
-            except Exception:
-                pass
-        raise
-    if logging_on:
-        try:
-            rec = case_log.build_record(
-                model=model, result=result, error=None,
-                user_text=user_text, session_id=session_id,
-                input_form=input_form, stage="solve", detected=None,
-                data_dir=str(data_dir),
-            )
-            case_log.append_case_log(str(data_dir), rec)
-        except Exception:
-            pass
+    result = _run_with_case_log(
+        lambda: buried_pipe.run_buried_pipe(model, library=lib),
+        model, str(data_dir), case_log_enabled == "1", meta,
+    )
     return _dumps(result)
 
 
@@ -585,11 +568,13 @@ def export_case_log_excel(data_dir: str = "", output_path: str = "") -> str:
 
 
 @_friendly_errors("空间梁")
-def run_frame3d(model_json: str, data_dir: str = "", lang: str = "zh", units: str = "metric") -> str:
+def run_frame3d(model_json: str, data_dir: str = "", lang: str = "zh",
+                units: str = "metric", case_log_enabled: str = "0") -> str:
     """3D 空间梁框架求解（P3D-1）。
 
     输入 JSON 的节点可带 z 坐标；节点全部 z=0 且无面外载荷时自动退化为 2D 求解
     （返回 kind="frame"），保证现有 2D 算例行为不变。可用 "dim": 3 强制走 3D。
+    案例埋点开关与 run_solid_generic 一致（case_log_enabled="1" 才写）。
     """
     from . import frame3d as frame3d_mod
     set_locale(lang, units)
@@ -601,8 +586,12 @@ def run_frame3d(model_json: str, data_dir: str = "", lang: str = "zh", units: st
     if not isinstance(model, dict):
         raise ValueError("框架模型必须是 JSON 对象")
 
+    meta = model.pop("_case_meta", None) or {}
     lib = MaterialsLibrary(data_dir=str(data_dir) if data_dir else None)
-    result = frame3d_mod.run_frame3d(model, library=lib)
+    result = _run_with_case_log(
+        lambda: frame3d_mod.run_frame3d(model, library=lib),
+        model, str(data_dir), case_log_enabled == "1", meta,
+    )
     return _dumps(result)
 
 
@@ -653,11 +642,13 @@ def check_frame_stability(model_json: str, data_dir: str = "", lang: str = "zh",
 
 
 @_friendly_errors("温度历程")
-def run_transient(spec_json: str, data_dir: str = "", lang: str = "zh", units: str = "metric") -> str:
+def run_transient(spec_json: str, data_dir: str = "", lang: str = "zh",
+                  units: str = "metric", case_log_enabled: str = "0") -> str:
     """温度-载荷时间历程（Kotlin TransientSpec JSON 入，TransientResult JSON 出）。
 
     准静态热-力耦合：温度循环逐时刻替换各杆件温度载荷后复用框架求解，
     返回曲线、逐时刻变形/内力快照与最不利时刻。校验或求解失败抛 ValueError。
+    案例埋点开关与 run_solid_generic 一致（case_log_enabled="1" 才写）。
     """
     from . import transient as transient_mod
     set_locale(lang, units)
@@ -669,8 +660,12 @@ def run_transient(spec_json: str, data_dir: str = "", lang: str = "zh", units: s
     if not isinstance(spec, dict):
         raise ValueError("时间历程参数必须是 JSON 对象")
 
+    meta = spec.pop("_case_meta", None) or {}
     lib = MaterialsLibrary(data_dir=str(data_dir) if data_dir else None)
-    result = transient_mod.run_transient(spec, library=lib)
+    result = _run_with_case_log(
+        lambda: transient_mod.run_transient(spec, library=lib),
+        spec, str(data_dir), case_log_enabled == "1", meta,
+    )
     return _dumps(result)
 
 

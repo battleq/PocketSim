@@ -393,6 +393,13 @@ private fun describeLoad(ld: FrameLoad): String = when (ld.type.trim().lowercase
         ld.members.orEmpty().size,
         Units.force(abs(ld.total_N)).toString()
     )
+    "wind" -> stringResource(
+        R.string.frame_load_wind_fmt,
+        ld.wind_speed_m_s?.let { formatNum(it) + " m/s" }
+            ?: stringResource(R.string.frame_load_beaufort_fmt, ld.beaufort ?: 0),
+        formatNum(ld.area_m2),
+        ld.dir.uppercase()
+    )
     "thermal" -> stringResource(R.string.frame_load_thermal_fmt, ld.member ?: 0, formatNum(ld.delta_temp))
     else -> stringResource(
         R.string.frame_load_udl_fmt,
@@ -578,6 +585,22 @@ private fun FrameModelCanvas(model: FrameModel, modifier: Modifier) {
                 }
                 "udl" -> {
                     ld.member?.let { drawUdlOnMember(it, ld.qy) }
+                }
+                "wind" -> {
+                    // 风载：迎风节点各画一枚等长方向箭头（风力大小由代码侧换算，不在图上标数值）
+                    val ux = if (ld.dir.lowercase() == "y") 0f else 1f
+                    val uy = if (ld.dir.lowercase() == "y") -1f else 0f  // 画布 y 翻转：模型 +y 向上
+                    ld.nodes.orEmpty().forEach { nid ->
+                        val head = nodePos(nid) ?: return@forEach
+                        val len = 30.dp.toPx()
+                        val tail = Offset(head.x - ux * len, head.y - uy * len)
+                        drawLine(LOAD_COLOR, tail, head, strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round)
+                        val wing = 6.dp.toPx()
+                        val left = Offset(head.x - ux * wing + uy * wing * 0.6f, head.y - uy * wing - ux * wing * 0.6f)
+                        val right = Offset(head.x - ux * wing - uy * wing * 0.6f, head.y - uy * wing + ux * wing * 0.6f)
+                        drawLine(LOAD_COLOR, head, left, strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round)
+                        drawLine(LOAD_COLOR, head, right, strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round)
+                    }
                 }
                 "area" -> {
                     // 面荷载：总力按参与杆件长度分配为均布（与 Python 侧口径一致）

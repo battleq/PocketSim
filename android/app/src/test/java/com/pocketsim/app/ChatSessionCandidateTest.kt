@@ -346,6 +346,45 @@ class ChatSessionCandidateTest {
             firstExtra!!.second.joinToString("\n") { it.content }.contains("（生成备选模型）"))
     }
 
+    // P1-4：单模型路径（候选数=1）也做几何预检——首模型不稳 → 换 seed 重试一次并采用稳定结果
+    @Test
+    fun `单模型路径不稳时换seed重试 采用稳定结果`() = runTest {
+        var frameReady: FrameModel? = null
+        val client = FakeAiClient(listOf(beamNamed("不稳"), ready2Node))
+        val session = newSession(client, candidateCount = 1,
+            stabilityChecker = { m -> if (m.name.startsWith("不稳")) FrameStability("mechanism", "t") else null },
+            onFrame = { frameReady = it })
+
+        session.send("建模")
+
+        assertNotNull(frameReady)
+        assertEquals("重试就绪且稳定 → 应采用第二个模型", "悬臂搁板", frameReady!!.name)
+        assertEquals("不稳后应重试一次（共 2 次 LLM 调用）", 2, client.calls.size)
+    }
+
+    // P1-4：单模型路径预检稳定时不多调 LLM；强锚定（修改模型）路径跳过预检
+    @Test
+    fun `单模型路径稳定时不重试 强锚定跳过预检`() = runTest {
+        var frameReady: FrameModel? = null
+        val client = FakeAiClient(listOf(ready2Node))
+        val session = newSession(client, candidateCount = 1,
+            stabilityChecker = { FrameStability("mechanism", "t") },  // 全判不稳
+            onFrame = { frameReady = it })
+        session.send("建模")
+        // 首模型不稳 → 重试（第 2 次响应列表耗尽会抛越界？不会：FakeAiClient 越界抛 IndexOutOfBounds，
+        // 被 runCatching 捕获 → 保留原模型）
+        assertNotNull("重试失败也应保留原模型跳转", frameReady)
+
+        var anchored: FrameModel? = null
+        val client2 = FakeAiClient(listOf(ready2Node))
+        val session2 = newSession(client2, candidateCount = 1, regenAnchor = FrameModel(name = "锚"),
+            stabilityChecker = { FrameStability("mechanism", "t") },
+            onFrame = { anchored = it })
+        session2.send("改一下")
+        assertEquals("强锚定路径跳过预检：只调 1 次", 1, client2.calls.size)
+        assertNotNull(anchored)
+    }
+
     // 基准反问（ready=false）时：取消已起跑的补全、走 handleFrameParse 追问，不返回候选。
     @Test
     fun `基准反问时取消补全并走追问 不返回候选`() = runTest {

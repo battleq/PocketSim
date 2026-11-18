@@ -98,6 +98,39 @@ def test_upsert_missing_fields_raises(tmp_path):
         lib.upsert_material({"name": "缺参数材料", "elastic_modulus": 1e9})
 
 
+def test_upsert_out_of_range_values_raise(tmp_path):
+    """MAT-01：越界/非数值拒绝入库（与 Android 侧 MaterialValidation 镜像）。"""
+    lib = MaterialsLibrary(data_dir=str(tmp_path))
+    base = {
+        "name": "校验用测试材料",
+        "elastic_modulus": 200e9,
+        "poisson_ratio": 0.3,
+        "density": 7850.0,
+        "strength": 235.0,
+    }
+    for bad in (
+        dict(base, elastic_modulus=0.0),
+        dict(base, elastic_modulus=-1e9),
+        dict(base, elastic_modulus=2e12),
+        dict(base, poisson_ratio=0.5),
+        dict(base, poisson_ratio=-0.1),
+        dict(base, density=0.0),
+        dict(base, strength=-5.0),
+        dict(base, elastic_modulus=float("nan")),
+        dict(base, density="abc"),
+    ):
+        with pytest.raises(ValueError):
+            lib.upsert_material(bad)
+
+
+def test_builtin_records_pass_mat01_ranges():
+    """内置库所有记录都满足 MAT-01 范围（保证镜像范围不误伤合法材料）。"""
+    from pocketsim.materials import _validate_record_values
+    lib = MaterialsLibrary()
+    for rec in lib.all_materials():
+        _validate_record_values(rec)
+
+
 def test_save_and_reload_external_copy(tmp_path):
     """外部可写副本：保存后重新加载自动与内置库合并。"""
     lib = MaterialsLibrary(data_dir=str(tmp_path))

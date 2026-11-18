@@ -210,6 +210,8 @@
     <string name="frame_load_force_fmt">Node %1$d point load %2$s</string>
     <string name="frame_load_moment_fmt">Node %1$d moment %2$s</string>
     <string name="frame_load_udl_fmt">Member %1$d UDL %2$s</string>
+    <string name="frame_load_wind_fmt">Wind %1$s, area %2$s m², dir %3$s</string>
+    <string name="frame_load_beaufort_fmt">Beaufort %1$d</string>
     <string name="frame_load_area_fmt">Area load: %1$d members, total %2$s</string>
     <string name="frame_load_thermal_fmt">Member %1$d ΔT %2$s°C</string>
     <string name="frame_btn_run">Run</string>
@@ -328,6 +330,9 @@
     <string name="material_name_required">Please enter material name</string>
     <string name="material_e_required">Please enter elastic modulus</string>
     <string name="material_nu_required">Please enter Poisson\'s ratio</string>
+    <string name="material_density_required">Please enter density</string>
+    <string name="material_strength_required">Please enter representative strength</string>
+    <string name="material_save_fail">Save failed: %1$s</string>
     <string name="material_list_empty">No custom or web materials yet. Built-in materials are auto-matched during solving.</string>
     <string name="home_material_entry">Material Library</string>
 

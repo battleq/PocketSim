@@ -84,8 +84,8 @@ class ChatSession(
     /** 候选差异控制开关提供者：开启后过滤掉与基准差异过大的候选 */
     private val candidateDivergenceEnabledProvider: () -> Boolean = { true },
     /** 框架几何不变性预检：返回非 null = 不稳（机构 / 近机构），应在候选阶段剔除。
-     *  默认 { null } = 不预检，保持旧行为 / 测试兼容。仅对 Frame 候选生效，且单模型路径
-     *  （candidateCount≤1）与修改模型强锚定（regenAnchor≠null）跳过预检。 */
+     *  默认 { null } = 不预检，保持旧行为 / 测试兼容。仅对 Frame 模型生效；多候选路径剔除不稳
+     *  候选，单模型路径不稳时换 seed 重试一次；修改模型强锚定（regenAnchor≠null）跳过预检。 */
     private val stabilityChecker: suspend (FrameModel) -> FrameStability? = { null },
     /** 多候选就绪回调：首轮建模成功时携带已过滤候选列表，UI 据此跳候选选择页 */
     private val onCandidatesReady: (List<ModelCandidate>) -> Unit = {},
@@ -101,6 +101,10 @@ class ChatSession(
     private var lastUserText: String = ""
     /** 最近一条输入形态（E 列）：text / image / text+image */
     private var lastInputForm: String = "text"
+
+    /** 构造案例埋点上下文（C/D/E 列）：仅调试包（caseLogEnabled）在建模就绪时注入 */
+    private fun newCaseMeta(): CaseMeta =
+        CaseMeta(session_id = sessionId, user_text = lastUserText, input_form = lastInputForm)
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(listOf(ChatMessage(false, greeting)))
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
@@ -176,7 +180,9 @@ class ChatSession(
                 "dim 维度（2D/3D）都不得自行变更，严禁整体重画、严禁在用户未要求时改变维度或重新估计尺寸。" +
                 "只修改用户指定的字段，然后输出修改后的【完整】模型 JSON。\n当前模型：\n")
         }
-        append(AppJson.encodeToString(FrameModel.serializer(), model))
+        // 锚定块只放几何/材料/约束信息，避免把案例埋点上下文（_case_meta）泄露给 LLM
+        // （PromptJson 省略 null 键，"_case_meta":null 也不出现）
+        append(PromptJson.encodeToString(FrameModel.serializer(), model.copy(case_meta = null)))
     }
 
     /**
@@ -248,14 +254,36 @@ class ChatSession(
             // 多候选（首轮 / 追问回答后、非修改模型、候选数 > 1）：基准与补全在同一协程域内并发起跑，
             // 总耗时 ≈ 单次建模调用，而非原来的"基准串行 + 补全并发"两段相加。
             // 基准先就绪先做分支判断；基准反问/失败时取消补全、走原 handleFrameParse 反问，行为不变。
-            // 修改模型（强锚定）或候选数 = 1 时走原单模型串行路径，完全不动。
+            // 修改模型（强锚定）或候选数 = 1 时走单模型串行路径（单模型路径含几何预检）。
             val multiMode = regenAnchor == null && candidateCountProvider() > 1
             val outcome = if (multiMode) runMultiCandidate(client, messages) else null
-            val parse = outcome?.baseParse ?: AiParser.parseFrameWithRetry(
+            var parse = outcome?.baseParse ?: AiParser.parseFrameWithRetry(
                 client, messages, threeD = threeD, autoDim = !threeD,
                 forceSolid = forceSolid, forceSolidGeneric = forceSolidGeneric,
                 forceShell = forceShell, forceBuriedPipe = forceBuriedPipe
             )
+            // 单模型路径（非强锚定）同样做几何不变性预检：机构 → 换 seed 重试一次；
+            // 重试就绪且稳定才采用，否则保留原模型（预览页/求解器会暴露问题，不静默吞掉）。
+            // 预检自身异常按"稳定"放行（与 ChaquopyEngine.checkFrameStability 语义一致）。
+            if (outcome == null && regenAnchor == null && parse.ready && parse.model != null) {
+                val unstable = runCatching { stabilityChecker(parse.model!!) }.getOrNull()
+                if (unstable != null) {
+                    val retry = runCatching {
+                        AiParser.parseFrameWithRetry(
+                            client, messages, threeD = threeD, autoDim = !threeD,
+                            forceSolid = forceSolid, forceSolidGeneric = forceSolidGeneric,
+                            forceShell = forceShell, forceBuriedPipe = forceBuriedPipe,
+                            seedOverride = client.stableSeedOf(messages) + 77
+                        )
+                    }.getOrNull()
+                    if (retry != null) {
+                        val retryModel = if (retry.ready) retry.model else null
+                        if (retryModel != null &&
+                            runCatching { stabilityChecker(retryModel) }.getOrNull() == null
+                        ) parse = retry
+                    }
+                }
+            }
             history.add(userMsg)
             history.add(LlmMessage("assistant", AppJson.encodeToString(AiFrameResult.serializer(), parse)))
 
@@ -350,25 +378,25 @@ class ChatSession(
         val flow = parse.flow
         if (parse.ready && parse.kind.trim().lowercase() == "flow" && flow != null) {
             append(ChatMessage(false, t("流体模型已建好，请前往预览确认。", "Flow model ready — please review and confirm.")))
-            onFlowReady(flow)
+            onFlowReady(if (caseLogEnabled) flow.copy(case_meta = newCaseMeta()) else flow)
             return
         }
         val seepage = parse.seepage
         if (parse.ready && parse.kind.trim().lowercase() == "seepage" && seepage != null) {
             append(ChatMessage(false, t("渗流模型已建好，请前往预览确认。", "Seepage model ready — please review and confirm.")))
-            onSeepageReady(seepage)
+            onSeepageReady(if (caseLogEnabled) seepage.copy(case_meta = newCaseMeta()) else seepage)
             return
         }
         val transient = parse.transient
         if (parse.ready && parse.kind.trim().lowercase() == "transient" && transient != null) {
             append(ChatMessage(false, t("时间历程参数已就绪，请前往预览确认。", "Transient parameters ready — please review and confirm.")))
-            onTransientReady(transient)
+            onTransientReady(if (caseLogEnabled) transient.copy(case_meta = newCaseMeta()) else transient)
             return
         }
         val solid = parse.solid
         if (parse.ready && parse.kind.trim().lowercase() == "solid" && solid != null) {
             append(ChatMessage(false, t("三维实体模型已建好，请前往预览确认。", "3D solid model ready — please review and confirm.")))
-            onSolidReady(solid)
+            onSolidReady(if (caseLogEnabled) solid.copy(case_meta = newCaseMeta()) else solid)
             return
         }
         val solidGeneric = parse.solid_generic
@@ -427,7 +455,7 @@ class ChatSession(
         val model = parse.model
         if (parse.ready && model != null) {
             append(ChatMessage(false, t("模型已建好，请前往预览确认。", "Model ready — please review and confirm.")))
-            onFrameReady(model)
+            onFrameReady(if (caseLogEnabled) model.copy(case_meta = newCaseMeta()) else model)
             return
         }
         if (roundsAsked >= MAX_FRAME_ROUNDS) {
@@ -472,7 +500,7 @@ class ChatSession(
     ): MultiCandidateOutcome {
         val count = candidateCountProvider().coerceIn(1, 3)
         val baseSeed = client.stableSeedOf(messages)
-        // 单模型路径（count≤1）与修改模型强锚定（regenAnchor≠null）不加预检，行为与旧版完全一致
+        // 本函数只在多候选路径调用；单模型路径的预检在 send() 内单独进行（P1-4）
         val precheck = count > 1 && regenAnchor == null
         // 基准不稳时的重试 seed 偏移：避开补全槽位 1..count-1 与 10+i，保证换出不同模型
         val baseRetryOffset = 100
@@ -567,8 +595,10 @@ class ChatSession(
                 all
             }
             val result = if (filtered.isEmpty()) listOf(effectiveBase) else filtered
-            onCandidateDiag("done: all=${all.size} filtered=${filtered.size} result=${result.size} obs=${baseObservation.isNotBlank()}")
-            MultiCandidateOutcome(baseParse, result)
+            // 多候选路径：仅调试包把用户上下文注入每个候选模型，预览页选中后透传到求解器
+            val logged = if (caseLogEnabled) result.map { it.withCaseMeta() } else result
+            onCandidateDiag("done: all=${all.size} filtered=${filtered.size} result=${logged.size} obs=${baseObservation.isNotBlank()}")
+            MultiCandidateOutcome(baseParse, logged)
         }
     }
 
@@ -578,6 +608,17 @@ class ChatSession(
             "$observation\n" +
             "请基于该观测生成一个不同的合理简化：保持杆件清单与连接关系，可调整节点坐标、截面、支座位置形成备选方案；" +
             "model 的节点坐标必须与观测一致。可省略 observation 字段，只输出 model 即可。"
+
+    /** 候选注入案例埋点上下文：保留到预览/求解页，bridge 弹出后写入 case_log.jsonl */
+    private fun ModelCandidate.withCaseMeta(): ModelCandidate = when (this) {
+        is ModelCandidate.Frame -> copy(model = model.copy(case_meta = newCaseMeta()))
+        is ModelCandidate.Flow -> copy(model = model.copy(case_meta = newCaseMeta()))
+        is ModelCandidate.Seepage -> copy(model = model.copy(case_meta = newCaseMeta()))
+        is ModelCandidate.Transient -> copy(spec = spec.copy(case_meta = newCaseMeta()))
+        is ModelCandidate.Solid -> copy(model = model.copy(case_meta = newCaseMeta()))
+        is ModelCandidate.SolidGeneric -> copy(model = model.copy(case_meta = newCaseMeta()))
+        is ModelCandidate.Shell -> copy(model = model.copy(case_meta = newCaseMeta()))
+    }
 
     /** 诊断用候选概要：Frame 给出节点/杆件数，其他给出类型 */
     private fun candSummary(c: ModelCandidate?): String = when (c) {
@@ -764,7 +805,7 @@ NEVER use out_of_scope for that case.""".trimIndent()
                （会让刚度重复计入、变形图上叠出两条线）；
             3. supports 声明支座，每项 {"node":节点编号,"type":"fixed|pinned|roller"}：
                fixed（嵌固，插入墙体/地面）、pinned（铰接）、roller（滚轴，只挡竖向）；
-            4. loads 声明载荷（type 必须且只能用 "force" / "udl" / "area" / "thermal"，禁止别名）。
+            4. loads 声明载荷（type 必须且只能用 "force" / "udl" / "area" / "wind" / "thermal"，禁止别名）。
                【先判荷载类型再填数值】按作用宽度 b 与杆件跨度 L 的比例判定：
                - b ≤ 0.1L 或 ≤ 50 mm（单个挂点、吊钩、机器地脚、立柱传来的集中反力）
                  → 集中力：{"type":"force","node":编号,"fx":0,"fy":-294}
@@ -778,14 +819,18 @@ NEVER use out_of_scope for that case.""".trimIndent()
                  禁止折算成一个集中力，用面荷载声明总重，由求解器按杆件长度自动分配为均布：
                  {"type":"area","members":[5,6],"total_N":-600}
                  （members 只写真正承托该面板的杆件；total_N 为面板总重的负值）；
+               - 风载（用户给风速/风级时用这个，禁止自己心算成 fx）：
+                 {"type":"wind","nodes":[迎风节点编号],"wind_speed_m_s":15,"dir":"x","area_m2":6.0}
+                 （wind_speed_m_s 与 beaufort 二选一；area_m2 为受风投影面积 m²；
+                  净风力 F=cp×½×1.225×v²×A 由代码换算并均摊到 nodes，cp 缺省 1.2）；
                - 温度变化（热胀冷缩）：{"type":"thermal","member":杆件编号,"delta_temp":40}
                  （单位 °C，升温为正、降温为负，基准环境温度 20°C；
                  如"夏天钢管被晒到 60°C"→ delta_temp=40；
                  只在用户明确提到温度变化/热胀冷缩/暴晒/结冰/采暖时才加）；
                不要用 "distributed" "point" "concentrated" "surface" 等其他写法；
                载荷数值不能为 0：没有载荷的构件就不要写进 loads，禁止用 qy=0 占位；
-               平面模型里风向/水平推力必须用节点集中力 fx（按迎风面积分摊到各节点），
-               qy 只能表示竖向均布载荷；
+               平面模型里风载必须用 type=wind 源字段（风速/风级+受风面积，代码自动换算），
+               其他水平推力用节点集中力 fx；qy 只能表示竖向均布载荷；
             5. 材料是必需信息，必须由用户明确给出，严禁自行默认：
                用户没有说明材质时（例如只说"这张桌子撑得住吗""搁板能放多少"、只给尺寸和重量），
                必须输出 ready=false、model=null，并在 questions 里追问材料，
@@ -1046,7 +1091,7 @@ NEVER use out_of_scope for that case.""".trimIndent()
                  全滚轴只挡竖向、水平方向可整体飘移，结构是机构无法求解；必须至少一个 fixed
                  或 pinned 提供水平约束（其余腿可用 roller）。带轮子的家具/货架建模时，轮子
                  视为固定支座（静力分析需要固定参考系），不要把每条腿都设为 roller。
-            5. loads 声明载荷（type 必须且只能用 "force" / "udl" / "area" / "thermal"，禁止别名）。
+            5. loads 声明载荷（type 必须且只能用 "force" / "udl" / "area" / "wind" / "thermal"，禁止别名）。
                【先判荷载类型再填数值】按作用宽度 b 与杆件跨度 L 的比例判定：
                - b ≤ 0.1L 或 ≤ 50 mm（单个挂点、吊钩、设备地脚、立柱传来的集中反力）
                  → 集中力/挂重：{"type":"force","node":编号,"fx":0,"fy":0,"fz":-294}
@@ -1060,6 +1105,10 @@ NEVER use out_of_scope for that case.""".trimIndent()
                  禁止折算成一个集中力，用面荷载声明总重，由求解器按杆件长度自动分配为均布：
                  {"type":"area","members":[9,10,11,12],"total_N":-600}
                  （members 只写真正承托该面板的横杆；total_N 为面板总重的负值）；
+               - 风载（用户给风速/风级时用这个，禁止自己心算成 fx/fy）：
+                 {"type":"wind","nodes":[迎风节点编号],"beaufort":8,"dir":"x","area_m2":12.0}
+                 （wind_speed_m_s 与 beaufort 二选一；dir 取风的水平方向 x/y；area_m2 为受风投影面积 m²；
+                  净风力 F=cp×½×1.225×v²×A 由代码换算并均摊到 nodes，cp 缺省 1.2）；
                - 温度变化：{"type":"thermal","member":杆件编号,"delta_temp":40}
                  （°C，升温为正、降温为负，基准 20°C；只在用户明确提到温度变化/暴晒/采暖时才加）；
                - 面状构件整面承重时不要折算成跨中集中力；只有单件重物压在局部时才在
