@@ -61,6 +61,10 @@ Copyright (c) 2024–2026 PocketSim 口袋仿真. All rights reserved.
 ## 6. 第三方组件
 
 - Chaquopy（MIT）、scikit-fem（BSD）、SciPy（BSD）、NumPy（BSD-3-Clause）、
+  OpenBLAS（BSD-3-Clause）、reportlab（BSD · ReportLab 变体）、Pillow（HPND）、
+  charset-normalizer（MIT）、FreeType（FTL）、libjpeg（IJG）、
+  libc++（Apache-2.0 WITH LLVM-exception）、libquadmath（LGPL-2.1-or-later）、
+  libgfortran（GPL-3.0-or-later，附 GCC Runtime Library Exception）、
   AndroidX/Compose（Apache-2.0）、OkHttp（Apache-2.0）、kotlinx.serialization（Apache-2.0）
   等第三方组件遵循其各自许可，不受本文件影响。
 - 完整清单与许可原文见 App 内「设置 → 开源许可」（可逐项查看全文），

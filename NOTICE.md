@@ -62,6 +62,9 @@ Submitting a pull request, patch, or code snippet indicates that you agree:
 ## 6. Third-Party Components
 
 - Third-party components such as Chaquopy (MIT), scikit-fem (BSD), SciPy (BSD), NumPy (BSD-3-Clause),
+  OpenBLAS (BSD-3-Clause), reportlab (BSD, ReportLab variant), Pillow (HPND), charset-normalizer (MIT),
+  FreeType (FTL), libjpeg (IJG), libc++ (Apache-2.0 WITH LLVM-exception),
+  libquadmath (LGPL-2.1-or-later), libgfortran (GPL-3.0-or-later with GCC Runtime Library Exception),
   AndroidX/Compose (Apache-2.0), OkHttp (Apache-2.0), kotlinx.serialization (Apache-2.0)
   remain under their own licenses and are unaffected by this file.
 - The full list and license texts are available in the app under "Settings → Open Source Licenses" (viewable item by item),

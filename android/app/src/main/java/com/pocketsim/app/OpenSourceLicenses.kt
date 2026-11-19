@@ -43,6 +43,16 @@ object OpenSourceLicenses {
                    "并允许技术用户替换 .so 文件。非静态链接，故不触发 GPL 传染性。",
             licenseAsset = "licenses/LGPL-2.1.txt"
         ),
+        Dep(
+            name = "libgfortran (GCC)",
+            version = "libgfortran.so",
+            license = "GPL-3.0-or-later + GCC Runtime Library Exception",
+            isCopyleft = true,
+            scope = "scipy 传递依赖 · Fortran 运行时",
+            note = "GCC 的 Fortran 运行时。GPLv3 第 7 条的 GCC 运行时例外允许与闭源程序链接分发，" +
+                   "义务是随附 GPL-3.0 全文、例外条款与版权声明；本页所附文本已含三者。",
+            licenseAsset = "licenses/GPL-3.0-libgfortran.txt"
+        ),
 
         // ----- 宽松许可组件 -----
         Dep(
@@ -56,7 +66,7 @@ object OpenSourceLicenses {
         ),
         Dep(
             name = "scikit-fem",
-            version = "10.0.2",
+            version = "12.0.2",
             license = "BSD-3-Clause",
             isCopyleft = false,
             scope = "2D 线弹性有限元单元库（solver.py）",
@@ -69,6 +79,65 @@ object OpenSourceLicenses {
             isCopyleft = false,
             scope = "数组计算基础（全引擎依赖）",
             licenseAsset = "licenses/BSD-3-Clause-numpy.txt"
+        ),
+
+        // ----- Python 运行时传递依赖（均由 pip 打包进 APK）-----
+        Dep(
+            name = "reportlab",
+            version = "5.1.0",
+            license = "BSD (ReportLab)",
+            isCopyleft = false,
+            scope = "PDF 报告生成（python/pdf_report）",
+            note = "ReportLab 自有 BSD 变体，再分发须保留其版权声明",
+            licenseAsset = "licenses/BSD-ReportLab.txt"
+        ),
+        Dep(
+            name = "Pillow",
+            version = "11.0.0",
+            license = "HPND",
+            isCopyleft = false,
+            scope = "图像读写 / PDF 内嵌图片（reportlab 依赖）",
+            licenseAsset = "licenses/HPND-Pillow.txt"
+        ),
+        Dep(
+            name = "charset-normalizer",
+            version = "3.5.2",
+            license = "MIT",
+            isCopyleft = false,
+            scope = "reportlab 传递依赖 · 字符编码探测",
+            licenseAsset = "licenses/MIT-charset-normalizer.txt"
+        ),
+        Dep(
+            name = "FreeType",
+            version = "2.9.1 (Chaquopy wheel)",
+            license = "FTL",
+            isCopyleft = false,
+            scope = "Pillow 传递依赖 · 字体渲染",
+            licenseAsset = "licenses/FTL-freetype.txt"
+        ),
+        Dep(
+            name = "libjpeg",
+            version = "1.5.3 (Chaquopy wheel)",
+            license = "IJG",
+            isCopyleft = false,
+            scope = "Pillow 传递依赖 · JPEG 编解码",
+            licenseAsset = "licenses/IJG-libjpeg.txt"
+        ),
+        Dep(
+            name = "libc++ (LLVM)",
+            version = "18.0 (Chaquopy wheel)",
+            license = "Apache-2.0 WITH LLVM-exception",
+            isCopyleft = false,
+            scope = "CPython / 原生扩展的 C++ 运行库",
+            licenseAsset = "licenses/Apache-2.0-LLVM-exception.txt"
+        ),
+        Dep(
+            name = "OpenBLAS",
+            version = "0.2.20 (Chaquopy wheel)",
+            license = "BSD-3-Clause",
+            isCopyleft = false,
+            scope = "numpy / scipy 线性代数后端",
+            licenseAsset = "licenses/BSD-3-Clause-openblas.txt"
         ),
         Dep(
             name = "Chaquopy",
