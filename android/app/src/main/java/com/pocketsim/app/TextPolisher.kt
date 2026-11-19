@@ -42,7 +42,7 @@ class TextPolisher(private val clientProvider: suspend () -> AiClient) {
                         LlmMessage("system", if (english) SYSTEM_PROMPT_EN else SYSTEM_PROMPT),
                         LlmMessage("user", src)
                     ),
-                    jsonMode = false
+                    jsonMode = false, tag = "polish"
                 )
             }
         } catch (e: TimeoutCancellationException) {

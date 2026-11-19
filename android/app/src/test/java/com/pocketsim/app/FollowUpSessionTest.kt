@@ -323,7 +323,7 @@ class FollowUpSessionTest {
     @Test
     fun `FollowUp 接口异常置fatalError`() = runTest {
         val client = object : AiClient {
-            override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?): String =
+            override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?): String =
                 throw java.io.IOException("HTTP 500")
         }
         val s = FrameFollowUpSession(

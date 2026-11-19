@@ -37,6 +37,59 @@ data class LlmMessage(
 )
 
 /**
+ * 一次 LLM 调用的 token 用量（P-05 采集层）。字段兼容 OpenAI 与 Anthropic 两种口径：
+ * OpenAI prompt_tokens/completion_tokens（+ details 里的 reasoning/cached），
+ * Anthropic input_tokens/output_tokens（+ cache_read_input_tokens）。
+ * 服务未返回 usage 或字段缺失时为 null（区别于 0，聚合时不混淆）。
+ */
+data class LlmUsage(
+    val promptTokens: Int? = null,
+    val completionTokens: Int? = null,
+    /** 思考 token（OpenAI completion_tokens_details.reasoning_tokens；Anthropic 不单独暴露） */
+    val reasoningTokens: Int? = null,
+    /** 缓存命中的输入 token（OpenAI prompt_tokens_details.cached_tokens / Anthropic cache_read_input_tokens） */
+    val cachedTokens: Int? = null
+)
+
+/** 一次调用的完整观测记录：写 {filesDir}/llm_stats.jsonl（仅调试包，见规则文档 P-05） */
+data class LlmCallStat(
+    /** 调用通道标签（frame_model/followup/polish/…），由调用方经 complete(tag=) 传入 */
+    val tag: String?,
+    val model: String,
+    val provider: String,
+    /** Kimi 推理强度档（low/high/max）；非 Kimi 无意义，保留供聚合过滤 */
+    val effort: String,
+    val stream: Boolean,
+    /** 端到端耗时（含限流退避重试），毫秒 */
+    val ms: Long,
+    val ok: Boolean,
+    /** 是否发生过限流退避重试 */
+    val retried: Boolean,
+    val usage: LlmUsage?
+)
+
+/** LlmCallStat → llm_stats.jsonl 单行 JSON（internal 便于 JVM 单测验证字段口径） */
+internal fun llmUsageJsonLine(s: LlmCallStat, ts: Long): String = buildJsonObject {
+    put("ts", ts)
+    s.tag?.let { put("tag", it) }
+    put("model", s.model)
+    put("provider", s.provider)
+    put("effort", s.effort)
+    put("stream", s.stream)
+    put("ms", s.ms)
+    put("ok", s.ok)
+    put("retried", s.retried)
+    s.usage?.let { u ->
+        put("usage", buildJsonObject {
+            u.promptTokens?.let { put("prompt", it) }
+            u.completionTokens?.let { put("completion", it) }
+            u.reasoningTokens?.let { put("reasoning", it) }
+            u.cachedTokens?.let { put("cached", it) }
+        })
+    }
+}.toString()
+
+/**
  * 组装 OpenAI chat 的 messages JSON 数组（internal 便于 JVM 单测直接验证形状）：
  * 无图 → "content" 为纯文本；带图 → "content" 为
  * [{"type":"text","text":...}, {"type":"image_url","image_url":{"url":"data:image/jpeg;base64,..."}}...]
@@ -152,10 +205,17 @@ interface AiClient {
     /**
      * 一次补全请求。
      * @param jsonMode 尽力请求 JSON 输出（response_format=json_object，服务端不支持时靠提示词兜底）
+     * @param tag 调用通道标签（frame_model/followup/polish/…），仅用于调试包 usage 采集归组（P-05），
+     *   不参与请求内容，不影响输出。
      * @return 助理消息文本
      * @throws IOException 网络 / HTTP / 响应结构异常（带中文可读信息）
      */
-    suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean = false, seedOverride: Int? = null): String
+    suspend fun complete(
+        messages: List<LlmMessage>,
+        jsonMode: Boolean = false,
+        seedOverride: Int? = null,
+        tag: String? = null
+    ): String
 
     /**
      * 带 JSON Schema 的补全：schema 非空时请求 response_format=json_schema（strict），
@@ -166,8 +226,15 @@ interface AiClient {
         messages: List<LlmMessage>,
         jsonMode: Boolean,
         seedOverride: Int?,
-        schema: JsonObject?
-    ): String = complete(messages, jsonMode, seedOverride)
+        schema: JsonObject?,
+        tag: String? = null
+    ): String = complete(messages, jsonMode, seedOverride, tag)
+
+    /**
+     * 返回一个强制指定思考强度档（low/high/max）的客户端（P-03 分档：重试升档用）。
+     * 默认实现忽略并返回自身——测试 fake 与不支持该参数的服务无需改动。
+     */
+    fun withReasoningEffort(effort: String): AiClient = this
 
     /**
      * 基于消息内容的稳定非负整数哈希：同输入 → 同 seed（服务端支持 seed 时输出可复现）。
@@ -244,11 +311,31 @@ class LlmClientImpl(
      */
     private val preferHighSpeed: Boolean = false,
     /** 测试用：注入自定义 OkHttpClient（如带拦截器模拟 4xx 降级重试）；null 时按 timeout 自建 */
-    private val httpClient: OkHttpClient? = null
+    private val httpClient: OkHttpClient? = null,
+    /**
+     * usage 采集回调（P-05）：每次调用（成功或失败）结束时收到一条 [LlmCallStat]。
+     * 仅调试包由 AppContainer 接线写 llm_stats.jsonl；正式包传 null——
+     * 届时连 usage 解析都不做，零开销。回调内部自行兜异常，绝不影响主流程。
+     */
+    private val usageSink: ((LlmCallStat) -> Unit)? = null
 ) : AiClient {
 
     /** 当前 Base URL 识别出的厂商，集中判定以替代散落的域名字符串判断 */
     private val provider: LlmProvider = LlmProvider.fromBaseUrl(baseUrl)
+
+    /** P-03 分档：复制一个仅思考档不同的客户端（其余参数与 usage 采集接线原样保留） */
+    override fun withReasoningEffort(effort: String): AiClient = LlmClientImpl(
+        baseUrl = baseUrl,
+        apiKey = apiKey,
+        model = model,
+        timeoutSeconds = timeoutSeconds,
+        visionModel = visionModel,
+        language = language,
+        reasoningEffort = effort,
+        preferHighSpeed = preferHighSpeed,
+        httpClient = httpClient,
+        usageSink = usageSink
+    )
 
     /** 按当前语言选择错误文案 */
     private fun t(zh: String, en: String): String =
@@ -327,7 +414,16 @@ class LlmClientImpl(
             // Kimi 思考模型非流式时，服务端要等思考+输出生成完才发 header，
             // 中间网关会关闭等待过久的连接 → 客户端 timeout。官方推荐 stream=true：
             // header 与首 token 立即返回、分块传输保持连接活跃。Kimi 域名与托管 Kimi 模型开启。
-            if (stream) put("stream", true)
+            if (stream) {
+                put("stream", true)
+                // usage 采集（P-05）：Kimi 官方端点流式默认不回传 usage，
+                // 需显式 stream_options.include_usage，最后一个 chunk 带完整 usage。
+                // 仅官方域名附加——第三方托管 Kimi（方舟等）可能不识别该字段报 400，
+                // 由参数降级阶梯兜底反而浪费一次调用，不如不发。
+                if (provider == LlmProvider.Kimi) {
+                    put("stream_options", buildJsonObject { put("include_usage", true) })
+                }
+            }
             // Kimi K3 系列（思考模型）temperature 固定为 1.0，传其他值直接 400，
             // 官方要求不显式传；多样性改由 seed 保证。其他服务保持建模 0.1 / 答疑 0.2。
             // 例外：第三方托管的 Kimi 模型（如火山方舟 ark 上的 kimi-k3-1-pro）
@@ -400,7 +496,10 @@ class LlmClientImpl(
             .post(body.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
             .build()
 
-    /** 单次请求：成功返回内容，非 2xx 抛 [HttpError]（可读文案由调用方统一生成） */
+    /** executeOnce 结果：内容 + usage（仅采集层启用时解析，否则 usage=null） */
+    private class Completion(val text: String, val usage: LlmUsage?)
+
+    /** 单次请求：成功返回内容（采集层启用时附带 usage），非 2xx 抛 [HttpError]（可读文案由调用方统一生成） */
     private fun executeOnce(
         messages: List<LlmMessage>,
         jsonMode: Boolean,
@@ -411,7 +510,7 @@ class LlmClientImpl(
         stream: Boolean = false,
         protocol: ApiProtocol = ApiProtocol.OPENAI,
         plainJson: Boolean = false
-    ): String {
+    ): Completion {
         val anthropic = protocol == ApiProtocol.ANTHROPIC
         val body = if (anthropic) {
             buildAnthropicRequestBody(messages)
@@ -433,14 +532,88 @@ class LlmClientImpl(
                 AppJson.parseToJsonElement(text).jsonObject.containsKey("error")
             }.getOrDefault(false)
             if (rootError) throw HttpError(400, text)
-            when {
+            val content = when {
                 anthropic && stream -> parseAnthropicSse(text)
                 anthropic -> parseAnthropicContent(text)
                 stream -> parseSseContent(text)
                 else -> parseContent(text)
             }
+            // usage 二次解析只在采集层启用时进行（正式包 sink=null，零开销）；
+            // 失败降级为 null，绝不影响主流程。
+            val usage = if (usageSink != null) extractUsage(text, anthropic, stream) else null
+            Completion(content, usage)
         }
     }
+
+    /**
+     * 从原始响应文本提取 usage（P-05 采集层，internal 便于 JVM 单测）：
+     * 按协议（OpenAI/Anthropic）与传输形态（流式 SSE/非流式 JSON）选择口径；
+     * 任何解析失败一律返回 null，不抛异常。
+     */
+    internal fun extractUsage(raw: String, anthropic: Boolean, stream: Boolean): LlmUsage? =
+        runCatching {
+            if (stream) extractSseUsage(raw, anthropic)
+            else {
+                val root = AppJson.parseToJsonElement(raw).jsonObject
+                if (anthropic) extractAnthropicUsage(root) else extractOpenAiUsage(root)
+            }
+        }.getOrNull()
+
+    /** OpenAI 口径 usage：prompt/completion_tokens + details 里的 cached/reasoning */
+    private fun extractOpenAiUsage(root: JsonObject): LlmUsage? {
+        val u = root["usage"] as? JsonObject ?: return null
+        val pd = u["prompt_tokens_details"] as? JsonObject
+        val cd = u["completion_tokens_details"] as? JsonObject
+        return LlmUsage(
+            promptTokens = u.intOrNull("prompt_tokens"),
+            completionTokens = u.intOrNull("completion_tokens"),
+            reasoningTokens = cd?.intOrNull("reasoning_tokens"),
+            cachedTokens = pd?.intOrNull("cached_tokens")
+        )
+    }
+
+    /** Anthropic 口径 usage：input/output_tokens + cache_read_input_tokens（无独立思考计数）。
+     *  流式 message_start 事件的 usage 嵌在 message 对象下，这里一并兼容。 */
+    private fun extractAnthropicUsage(root: JsonObject): LlmUsage? {
+        val u = (root["usage"] as? JsonObject)
+            ?: ((root["message"] as? JsonObject)?.get("usage") as? JsonObject)
+            ?: return null
+        return LlmUsage(
+            promptTokens = u.intOrNull("input_tokens"),
+            completionTokens = u.intOrNull("output_tokens"),
+            cachedTokens = u.intOrNull("cache_read_input_tokens")
+        )
+    }
+
+    /**
+     * SSE 流式 usage：逐 data: 分片找 usage 对象并合并（后到的非空字段覆盖）。
+     * OpenAI/Kimi：带 stream_options.include_usage 时最后一个 chunk 才含 usage；
+     * Anthropic：message_start 带输入侧、message_delta 带输出侧，需合并两个分片。
+     */
+    private fun extractSseUsage(raw: String, anthropic: Boolean): LlmUsage? {
+        var acc: LlmUsage? = null
+        raw.lineSequence().forEach { line ->
+            val t = line.trimStart()
+            if (!t.startsWith("data:")) return@forEach
+            val payload = t.removePrefix("data:").trim()
+            if (payload.isEmpty() || payload == "[DONE]" || !payload.contains("\"usage\"")) return@forEach
+            val obj = runCatching { AppJson.parseToJsonElement(payload).jsonObject }.getOrNull()
+                ?: return@forEach
+            val u = if (anthropic) extractAnthropicUsage(obj) else extractOpenAiUsage(obj)
+            if (u != null) {
+                acc = LlmUsage(
+                    promptTokens = u.promptTokens ?: acc?.promptTokens,
+                    completionTokens = u.completionTokens ?: acc?.completionTokens,
+                    reasoningTokens = u.reasoningTokens ?: acc?.reasoningTokens,
+                    cachedTokens = u.cachedTokens ?: acc?.cachedTokens
+                )
+            }
+        }
+        return acc
+    }
+
+    private fun JsonObject.intOrNull(key: String): Int? =
+        runCatching { this[key]?.jsonPrimitive?.content?.toInt() }.getOrNull()
 
     /** 可重试的 4xx（非授权 401/403）：seed 不识别 / schema 不支持等 */
     private fun isRetryable4xx(code: Int) = code in 400..499 && code != 401 && code != 403
@@ -501,11 +674,12 @@ class LlmClientImpl(
             )
         )
 
-    override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?): String =
-        complete(messages, jsonMode, seedOverride, null)
+    override suspend fun complete(
+        messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?
+    ): String = complete(messages, jsonMode, seedOverride, null, tag)
 
     override suspend fun complete(
-        messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, schema: JsonObject?
+        messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, schema: JsonObject?, tag: String?
     ): String = withContext(Dispatchers.IO) {
         val endpoint = resolveEndpoint(baseUrl) ?: throw IOException(
             t("API Base URL 无效：$baseUrl", "Invalid API base URL: $baseUrl")
@@ -531,8 +705,8 @@ class LlmClientImpl(
         fun isRateLimit(e: Throwable?): Boolean = e is HttpError &&
             (e.code == 429 || e.text.contains("rate_limit", ignoreCase = true))
 
-        fun doRequest(): String {
-            fun call(useSchema: Boolean, useSeed: Boolean, plain: Boolean): Result<String> = runCatching {
+        fun doRequest(): Completion {
+            fun call(useSchema: Boolean, useSeed: Boolean, plain: Boolean): Result<Completion> = runCatching {
                 executeOnce(
                     messages, jsonMode, useSeed, url,
                     if (useSeed) seedOverride else null,
@@ -581,6 +755,23 @@ class LlmClientImpl(
             "model=$model effort=$reasoningEffort highspeed=$preferHighSpeed provider=$provider " +
                 "ms=$ms retried=$perfRetried ok=${outcome.isSuccess}"
         )
+        // P-05 usage 采集：成功带 usage，失败也记一条 ok=false（token 未知、时延已知）。
+        // 仅调试包接线非空 sink；观测层任何异常一律吞掉，绝不影响建模主流程。
+        runCatching {
+            usageSink?.invoke(
+                LlmCallStat(
+                    tag = tag,
+                    model = effectiveModel(messages),
+                    provider = provider.name,
+                    effort = reasoningEffort,
+                    stream = useStream,
+                    ms = ms,
+                    ok = outcome.isSuccess,
+                    retried = perfRetried,
+                    usage = outcome.getOrNull()?.usage
+                )
+            )
+        }
         // 兜底：限流等路径会把 HttpError 直接抛到上层，它本身没有可读信息，
         // 界面会兜底成「未知错误」。这里统一转成带状态码/原因的可读异常。
         val err = outcome.exceptionOrNull()
@@ -588,7 +779,7 @@ class LlmClientImpl(
             throw if (isRateLimit(err)) rateLimitIOException(err.text)
             else httpErrorToIOException(err.code, err.text)
         }
-        outcome.getOrThrow()
+        outcome.getOrThrow().text
     }
 
     /**

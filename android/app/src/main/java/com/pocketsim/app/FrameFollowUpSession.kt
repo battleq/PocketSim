@@ -115,7 +115,7 @@ class FrameFollowUpSession(
             val client = aiClientProvider()
             val raw = client.complete(
                 listOf(LlmMessage("system", systemPrompt)) + history + userMsg,
-                jsonMode = true
+                jsonMode = true, tag = "followup"
             )
             history.add(userMsg)
             history.add(LlmMessage("assistant", raw))

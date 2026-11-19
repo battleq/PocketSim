@@ -1,6 +1,6 @@
 # PocketSim 建模质量规则（Modeling Quality Rules）
 
-> 版本：v2（2026-11-18，随 P0→P2 修复轮更新）｜适用范围：AI 建模全链路（ChatSession、
+> 版本：v3（2026-11-19，随「提示词成本测量」轮更新，新增 P 类与 §7）｜上一版：v2（2026-11-18，随 P0→P2 修复轮更新）｜适用范围：AI 建模全链路（ChatSession、
 > FrameFollowUpSession、模板流 ParamForm/run_scenario）与全部求解入口（frame/frame3d/flow/
 > seepage/transient/solid/solid_generic/shell_vessel/shell_buried_pipe）。
 > 本文是规则的唯一现行版本；历史 .doc 仅存档，不再维护。
@@ -102,6 +102,17 @@
 | RTR-01 | M | `parseFrameWithRetry` 重试预算：结构/契约错误重试 ≤1 次；语义错误按确定性修改单重试 ≤`MAX_SEMANTIC_RETRIES`(2) 次；两类叠加受全局上限 `MAX_TOTAL_ATTEMPTS`(3)（含首轮）兜底 | 语义耗尽抛 `AiRetryExhaustedException`（attempts + firstError 供埋点）；结构耗尽原样抛保留类型。Evidence：埋点记录总尝试次数与首轮错误 |
 | LOG-01 | M | **全部求解入口**（run_frame/run_flow/run_seepage/run_transient/run_solid/run_solid_generic/run_shell/run_buried_pipe/run_scenario）埋点：Kotlin 侧在序列化模型注入 `_case_meta`（session_id、user_text、input_form，键名与 Python `model.pop("_case_meta")` 契约一致），调试包 `case_log_enabled="1"` 时写 case_log.jsonl | 埋点自身失败绝不影响主流程（I 级实现，M 级覆盖要求）。错误按关键词归类到 G/L/M 等编号。模板流无会话上下文时只传开关、不注入 `_case_meta`；候选注入后 anchorBlock 用 `case_meta=null` 防上下文串染 |
 
+## 四·五、P 类：提示词与成本（v3 新增，初步依据见 §7）
+
+| 编号 | 强度 | Condition | Action / Criterion / Evidence |
+|------|------|-----------|-------------------------------|
+| P-01 | M | 静态前缀（system prompt + 输出 schema）是每次调用输入的绝对主体（实测前缀占输入 86–99%；FRAME_AUTO+schema ≈ 6.4k tok） | 新增建模规则**优先落 schema 约束或代码侧校验**（联动 C-01），提示词散文只兜底；若新增散文使任一通道静态前缀超过 7k tokens，必须先裁剪/去重/下沉代码侧，不得直接堆叠。Evidence：`PromptTokenBudgetTest` 表1 |
+| P-02 | M | 静态前缀必须**逐调用完全一致**：无时间戳、随机顺序、轮次相关内容；动态内容一律放 user 消息 | 理由：月之暗面对重复前缀自动上下文缓存（5min TTL，命中 ¥1.3 vs 未命中 ¥13/MTok，差 10 倍）；重试、多候选、5 分钟内追问全部复用同一前缀。Evidence：真机 llm_stats cached_tokens（P-05） |
+| P-03 | S | 思考强度分档：单调用成本由思考 token 主导。**真机实测（2026-11-19，v1.2.38 debug，K3.1-pro）**：low 档思考 488–759 tok（harness 假设 1k 偏高）、快 40–50%、缓存命中 98%，但调用层首次失败率 ~18%（11 次 2 败）且同请求 3 次建模仅 1 次合格；highspeed 更快但质量无提升、token 费约 2 倍（性价比为负，不做默认） | **已实施（2026-11-19）**：默认档 low（`SettingsRepository.llmReasoningEffort`），任何失败的重试自动升 high 兜底——`AiParser.parseFrameWithRetry` 第 2 次尝试起、`ChatSession` 单模型/候选失稳换 seed 重试经 `AiClient.withReasoningEffort("high")`；非 Kimi 服务该调用返回自身、行为不变。后续调档须附 llm_stats.jsonl 前后对比（P-05） |
+| P-04 | M | 调用次数乘数预算：任务成本 ≈ 调用次数 ×（前缀+输出+思考） | 候选 × 重试的最坏乘数（候选 3 × 全局 3 次尝试 + 失稳重试 ≈ 8 调用/任务）必须作为成本区间写进产品决策；`candidateCount` 与 `MAX_TOTAL_ATTEMPTS` 不得脱离成本表单独上调。Evidence：`PromptTokenBudgetTest` 表3 |
+| P-05 | M | 成本可观测性：每次 LLM 调用记录 usage（prompt/completion/reasoning/cached tokens + 时延），调试包写 `{dataDir}/llm_stats.jsonl`（开关同 caseLogEnabled，正式包零开销） | 任何提示词/候选/重试策略改动必须附改动前后调用级对比数据；离线估算（±30%）只作初步参考，以真机 usage 为准。状态：**采集层已实施**（2026-11-19）——`LlmClient.kt` 解析 OpenAI/Anthropic 两口径 usage（Kimi 官方域名流式自动带 `stream_options.include_usage`），`AppContainer.kt` 仅调试包落盘；调用带 `tag`（frame_model/followup/template_parse/material_lookup/optimize/polish）区分通道；失败调用也记 ok=false（时延已知、token 未知）。待真机采集数据替换 §7 假设档位 |
+| P-06 | S | 历史瘦身：当前 assistant 完整模型 JSON 写入 LLM history，后续每次调用重复付费 | 目标：历史只存结果摘要（kind+关键字段），完整模型存会话状态；实施前需埋点验证多轮一次通过率不劣化。状态：未实施 |
+
 ## 五、新增/变更入口的检查单
 
 新增一个求解器或建模路径时，必须逐项确认：
@@ -113,6 +124,7 @@
 5. 可推导载荷是否只暴露源字段、换算在代码侧（DIM-01）；
 6. 重试路径是否受全局预算约束（RTR-01）；
 7. 是否有对应测试：Python 闭式解/校核测试 + Kotlin 校验/注入测试。
+8. 是否改动静态前缀/思考档/调用乘数？改动前跑 `PromptTokenBudgetTest` 对照 P 类规则（P-01/P-02/P-04），改动后按 P-05 补对比数据。
 
 ## 六、代码镜像位置速查
 
@@ -126,3 +138,28 @@
 | 稳定性预检 STB-01 | `ChatSession.kt`（send 单模型路径、候选过滤）、`ChaquopyEngine.checkFrameStability` | `frame.py`（机构/奇异报错） |
 | 重试预算 RTR-01 | `AiParser.parseFrameWithRetry`（`MAX_SEMANTIC_RETRIES`、`MAX_TOTAL_ATTEMPTS`） | — |
 | 案例埋点 LOG-01 | `PythonBridge.kt`、`ChatSession.newCaseMeta()` | `bridge.py`、`case_log.py` |
+| 提示词与成本 P 类 | `ChatSession.kt`（提示词常量）、`FrameOutputSchema.kt`、`LlmClient.kt`（reasoning_effort、usage 采集 `extractUsage`/`LlmCallStat`）、`AppContainer.kt`（llm_stats.jsonl 落盘接线）、`SettingsRepository.kt`（默认档）、`PromptTokenBudgetTest.kt`（离线测量）、`LlmClientTest.kt`（采集层测试） | — |
+
+## 七、初步测量数据（2026-11-19，JVM harness 离线估算）
+
+**口径与来源**：定价取月之暗面公开价（platform.kimi.com/docs/pricing/chat，kimi-k3.1-pro：输入 ¥13/MTok、输出 ¥68/MTok、缓存命中 ¥1.3/MTok；思考 token 按输出计费）。token 估算按官方口径 1 token ≈ 1.5–2 汉字（CJK 0.6 tok/字、ASCII 0.3 tok/字），误差 ±30%，以真机 usage 为准。测量工具：`android/app/src/test/java/com/pocketsim/app/PromptTokenBudgetTest.kt`。
+
+**表1 静态输入规模（tok，含材料注入，schema ≈1441 tok）**：FRAME_AUTO 4923｜FRAME3D 3741｜SOLID_GENERIC 2655｜SHELL_VESSEL 1355｜BURIED_PIPE 815｜SOLID_FORCE 572。
+
+**表2 单任务成本要点（¥）**：
+- T1 简单平面框架单调用：low(1k 思考) ¥0.171 / high(3k) ¥0.307 / max(6k) ¥0.511。high 档构成：思考 ¥0.204（66%）+ 输入前缀 ¥0.083（27%）+ 正文输出 ¥0.020（7%）。
+- 前缀占输入 86–99%（照片任务除外）；输出正文普遍 <600 tok。
+- T2 追问第 2 轮输入仅 +49 tok——追问场景历史增量很小，成本大头仍是每调用重付前缀（靠缓存解决，非靠删历史）。
+
+**表3 乘数**：候选 3（无重试）T1：无缓存 ¥0.92 / 有缓存 ¥0.77；最坏路径 ≈8 调用/任务 ≈ ¥2.4（high、无缓存）。
+
+**成本杠杆排序**：①思考档位（P-03）＞②调用次数（P-04）＞③前缀缓存命中（P-02）＞④前缀长度裁剪（P-01）。删提示词散文省的是最便宜的项且有质量风险，必须最后做、用数据做。
+
+**复现命令**：
+```powershell
+gradle :app:testDebugUnitTest --tests "com.pocketsim.app.PromptTokenBudgetTest"
+```
+
+**编码坑（已根治，2026-11-19）**：本机工作区含中文路径时，Gradle daemon 以 UTF-8 写 test worker 的 classpath argfile，而 JDK17 启动器按本地编码(GBK)解码 → 中文路径条目乱码，全部单元测试类 ClassNotFoundException。永久修复：`android/gradle.properties` 的 `org.gradle.jvmargs` 已移除 `-Dfile.encoding=UTF-8`（daemon 默认按系统编码写 argfile，与启动器一致；源码/资源编码由 AGP/kotlinc 显式 UTF-8，不依赖 file.encoding）。全量 24 个测试类 0 失败验证通过。**勿再往 jvmargs 加回该标志。**
+
+**真机 usage 数据口径（P-05 采集层，待实测替换上表假设）**：调试包每次 LLM 调用在 `{filesDir}/llm_stats.jsonl` 追加一行：`{ts, tag, model, provider, effort, stream, ms, ok, retried, usage:{prompt, completion, reasoning, cached}}`。聚合要点：①按 `tag+effort` 分组求 reasoning/prompt 分布，替换表2 的 1k/3k/6k 假设档位；②`cached/prompt` 比例验证 P-02 缓存命中；③`ok=false` 与 `retried` 占比量化 P-04 乘数。拉取：`adb shell run-as <包名> cat files/llm_stats.jsonl > llm_stats.jsonl`（与 case_log.jsonl 同目录、同方式）。

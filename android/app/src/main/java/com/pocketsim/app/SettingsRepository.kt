@@ -73,11 +73,13 @@ data class AppSettings(
     /** 候选差异控制开关：开启后过滤掉与基准差异过大的候选（默认开启） */
     val candidateDivergenceEnabled: Boolean = true,
     /**
-     * Kimi 建模通道推理强度：low / high / max（默认 high）。
-     * Kimi 始终开启思考，max 默认档显著拖慢多候选生成；high 保留几何不变性推理同时控速。
-     * 仅当 Base URL 为 Kimi 域名（moonshot/kimi）时生效。
+     * Kimi 建模通道推理强度：low / high / max（默认 low，见 P-03 分档）。
+     * Kimi 始终开启思考，max 档显著拖慢多候选生成。
+     * P-03 分档（2026-11-19 真机实测）：low 档快 40–50%、思考约 0.5k tok，但首次失败率 ~18%；
+     * 故默认 low，结构/语义/几何不稳的重试由代码自动升 high 兜底（见 AiParser.parseFrameWithRetry
+     * 与 ChatSession 换 seed 重试），兼顾速度与质量。仅当 Base URL 为 Kimi 域名（moonshot/kimi）时生效。
      */
-    val llmReasoningEffort: String = "high",
+    val llmReasoningEffort: String = "low",
     /**
      * 高速建模开关（默认 false = 保持当前模型与质量）。
      * 开启后，Kimi（moonshot/kimi）域名的请求自动把模型切换为高速版（如 kimi-k3.1-pro → kimi-k3.1-pro-highspeed），
@@ -142,7 +144,8 @@ class SettingsRepository(private val context: Context) {
             cloudModel = p[Keys.CLOUD_MODEL] ?: "",
             candidateCount = (p[Keys.CANDIDATE_COUNT] ?: 1).coerceIn(1, 3),
             candidateDivergenceEnabled = p[Keys.CANDIDATE_DIVERGENCE] ?: true,
-            llmReasoningEffort = (p[Keys.REASONING_EFFORT] ?: "high").let {
+            // P-03：未配置时默认 low（重试路径由代码自动升 high）；存量非法值回退 high（从严）
+            llmReasoningEffort = (p[Keys.REASONING_EFFORT] ?: "low").let {
                 if (it in setOf("low", "high", "max")) it else "high"
             },
             highSpeedMode = p[Keys.HIGH_SPEED] ?: false,

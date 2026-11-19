@@ -524,7 +524,7 @@ class OptimizeSession(
                         )
                     )
                 ),
-                jsonMode = true
+                jsonMode = true, tag = "optimize"
             )
             val reply = AiParser.parseOptimize(raw, target.kind)
             if (reply.suggestions.isEmpty()) {

@@ -7,6 +7,7 @@
 package com.pocketsim.app
 
 import android.content.Context
+import java.io.File
 
 /**
  * 轻量依赖容器（AppContainer 模式，避免引入 DI 框架）。
@@ -33,6 +34,21 @@ open class AppContainer(context: Context) {
     open val engine: FeaEngine get() = chaquopy
     open val parser: ProblemParser get() = chaquopy
 
+    /**
+     * LLM usage 采集（规则文档 P-05）：仅调试包，每次调用追加一行到
+     * {filesDir}/llm_stats.jsonl（与 case_log.jsonl 同目录，adb pull 方式一致）；
+     * 正式包为 null——LlmClient 连 usage 解析都不做，零开销。
+     * 落盘失败静默吞掉（观测层绝不影响建模主流程）。
+     */
+    private val llmUsageSink: ((LlmCallStat) -> Unit)? = if (BuildConfig.DEBUG) {
+        { stat ->
+            runCatching {
+                File(appContext.filesDir, "llm_stats.jsonl")
+                    .appendText(llmUsageJsonLine(stat, System.currentTimeMillis()) + "\n")
+            }
+        }
+    } else null
+
     /** LLM 客户端工厂：每次调用按当前设置构建（设置页改完即时生效） */
     val aiClientProvider: suspend () -> AiClient = {
         val s = settingsRepository.current()
@@ -48,7 +64,9 @@ open class AppContainer(context: Context) {
             // Kimi 建模通道推理强度（仅 moonshot/kimi 域名生效）
             reasoningEffort = s.llmReasoningEffort,
             // 高速建模：Kimi 域名下自动切换高速版模型（默认关，保持当前质量）
-            preferHighSpeed = s.highSpeedMode
+            preferHighSpeed = s.highSpeedMode,
+            // usage 采集（P-05）：调试包写 llm_stats.jsonl，正式包为 null
+            usageSink = llmUsageSink
         )
     }
 

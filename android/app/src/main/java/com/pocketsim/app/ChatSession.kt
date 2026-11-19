@@ -269,8 +269,9 @@ class ChatSession(
                 val unstable = runCatching { stabilityChecker(parse.model!!) }.getOrNull()
                 if (unstable != null) {
                     val retry = runCatching {
+                        // P-03 分档：low 档产出被判几何不稳，换 seed 重试直接升 high 兜底
                         AiParser.parseFrameWithRetry(
-                            client, messages, threeD = threeD, autoDim = !threeD,
+                            client.withReasoningEffort("high"), messages, threeD = threeD, autoDim = !threeD,
                             forceSolid = forceSolid, forceSolidGeneric = forceSolidGeneric,
                             forceShell = forceShell, forceBuriedPipe = forceBuriedPipe,
                             seedOverride = client.stableSeedOf(messages) + 77
@@ -514,7 +515,8 @@ class ChatSession(
 
         // 单个候选：失败、未就绪、或（仅 Frame）几何不稳都返回 null，由换 seed 重试兜底。
         // observation 非空时（C2 共享几何观测）注入提示词，让补全复用基准观测、只生成坐标。
-        suspend fun runCandidate(seedOffset: Int, observation: String? = null): ModelCandidate? = try {
+        // effortHigh=true（P-03 分档）：用于不稳/缺失后的换 seed 重试，直接以 high 档产出。
+        suspend fun runCandidate(seedOffset: Int, observation: String? = null, effortHigh: Boolean = false): ModelCandidate? = try {
             val seed = baseSeed + seedOffset
             val msgs = if (!observation.isNullOrBlank()) {
                 messages + LlmMessage("user", observationHint(observation))
@@ -522,7 +524,8 @@ class ChatSession(
                 messages.toList()
             }
             val p = AiParser.parseFrameWithRetry(
-                client, msgs, threeD = threeD, autoDim = !threeD,
+                if (effortHigh) client.withReasoningEffort("high") else client,
+                msgs, threeD = threeD, autoDim = !threeD,
                 forceSolid = forceSolid, forceSolidGeneric = forceSolidGeneric,
                 forceShell = forceShell, forceBuriedPipe = forceBuriedPipe,
                 seedOverride = seed
@@ -568,7 +571,7 @@ class ChatSession(
             // 基准预检：不稳则换 seed 重试 1 次（带观测，与补全 firstPass 重叠进行）；仍不稳保留原基准兜底
             val effectiveBase = if (precheck && !frameStable(base)) {
                 onCandidateDiag("base unstable -> retry seed=${baseSeed + baseRetryOffset}")
-                runCandidate(baseRetryOffset, baseObservation) ?: base
+                runCandidate(baseRetryOffset, baseObservation, effortHigh = true) ?: base
             } else {
                 base
             }
@@ -577,7 +580,7 @@ class ChatSession(
             // 补全缺失/不稳时换 seed 再试一次：C2 注入基准观测，帮助失败补全更快更稳地产出
             val retried = coroutineScope {
                 slots.mapIndexed { idx, i ->
-                    async { if (firstPass[idx] == null) runCandidate(10 + i, baseObservation) else null }
+                    async { if (firstPass[idx] == null) runCandidate(10 + i, baseObservation, effortHigh = true) else null }
                 }.awaitAll()
             }
             val extraCandidates = slots.indices.mapNotNull { idx -> firstPass[idx] ?: retried[idx] }

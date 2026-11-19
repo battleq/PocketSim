@@ -263,7 +263,7 @@ object AiParser {
         messages: List<LlmMessage>,
         templates: List<TemplateInfo>? = null
     ): AiParseResult {
-        val first = client.complete(messages, jsonMode = true)
+        val first = client.complete(messages, jsonMode = true, tag = "template_parse")
         try {
             return parse(first, templates)
         } catch (e: AiParseException) {
@@ -274,7 +274,7 @@ object AiParser {
                     "{\"template_id\":\"...\",\"params\":{...},\"missing_params\":[...],\"questions\":[...]}，" +
                     "不要包含任何其他文字或代码围栏。"
             )
-            val second = client.complete(retryMessages, jsonMode = true)
+            val second = client.complete(retryMessages, jsonMode = true, tag = "template_parse")
             return parse(second, templates)
         }
     }
@@ -1947,8 +1947,15 @@ object AiParser {
         var firstError: String? = null
         while (true) {
             attempts++
+            // P-03 分档：首轮用用户配置档（默认 low，实测快 40–50%）；
+            // 一旦出现结构/语义失败，重试自动升 high 兜底质量（真机实测 low 首次失败率 ~18%）。
+            // 非 Kimi 服务 withReasoningEffort 返回自身，行为不变。
+            val callClient = if (attempts == 1) client else client.withReasoningEffort("high")
             // 传 FRAME_OUTPUT_SCHEMA 走 json_schema 严格约束解码（服务不支持时 LlmClient 自动降级 json_object）
-            val raw = client.complete(conversation, jsonMode = true, seedOverride = seedOverride, schema = FRAME_OUTPUT_SCHEMA)
+            val raw = callClient.complete(
+                conversation, jsonMode = true, seedOverride = seedOverride,
+                schema = FRAME_OUTPUT_SCHEMA, tag = "frame_model"
+            )
             val outcome = runCatching {
                 parseFrame(raw).also { checkRequiredKind(it, requiredKind) }
             }

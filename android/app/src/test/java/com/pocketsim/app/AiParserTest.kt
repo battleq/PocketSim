@@ -1311,7 +1311,7 @@ class FakeAiClient(private val responses: List<String>) : AiClient {
     val calls = mutableListOf<List<LlmMessage>>()
     val seedOverrides = mutableListOf<Int?>()
 
-    override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?): String {
+    override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?): String {
         calls.add(messages)
         seedOverrides.add(seedOverride)
         return responses[calls.size - 1]

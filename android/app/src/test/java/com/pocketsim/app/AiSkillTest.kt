@@ -13,7 +13,7 @@ import org.junit.Test
 class AiSkillTest {
 
     private class NoAiClient : AiClient {
-        override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?): String =
+        override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?): String =
             error("单测不应调用 AI 接口")
     }
 

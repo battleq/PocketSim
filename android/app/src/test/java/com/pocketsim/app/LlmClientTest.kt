@@ -16,6 +16,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
@@ -695,6 +696,213 @@ class LlmClientTest {
         assertFalse("中转网关对 temperature 支持不一，不应发送", body.contains("temperature"))
         assertFalse("不应发送 stream", body.contains("\"stream\""))
         assertFalse("Anthropic 不支持 response_format", body.contains("response_format"))
+    }
+
+    // ------------------------------------------------------------------
+    // P-05：usage 采集层（extractUsage / stream_options / usageSink / JSONL 口径）
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `extractUsage OpenAI 非流式含 details 的 reasoning 与 cached`() {
+        val client = newClient(OkHttpClient())
+        val raw = """{"choices":[{"message":{"content":"ok"}}],
+            "usage":{"prompt_tokens":5200,"completion_tokens":3100,
+            "prompt_tokens_details":{"cached_tokens":4800},
+            "completion_tokens_details":{"reasoning_tokens":2900}}}"""
+        val u = client.extractUsage(raw, anthropic = false, stream = false)
+        assertNotNull("应提取到 usage", u)
+        assertEquals(5200, u!!.promptTokens)
+        assertEquals(3100, u.completionTokens)
+        assertEquals(2900, u.reasoningTokens)
+        assertEquals(4800, u.cachedTokens)
+    }
+
+    @Test
+    fun `extractUsage 无 usage 或非法 JSON 一律返回 null 不抛`() {
+        val client = newClient(OkHttpClient())
+        assertNull(client.extractUsage("""{"choices":[]}""", false, false))
+        assertNull(client.extractUsage("not json", false, false))
+        assertNull(client.extractUsage("data: {\"choices\":[]}\n\ndata: [DONE]\n", false, true))
+    }
+
+    @Test
+    fun `extractUsage Kimi 流式取末 chunk 的 usage`() {
+        // stream_options.include_usage 后最后一个 chunk choices 为空、usage 完整
+        val client = newClient(OkHttpClient())
+        val sse = """
+            data: {"choices":[{"delta":{"reasoning_content":"思考"}}]}
+
+            data: {"choices":[{"delta":{"content":"好了"}}]}
+
+            data: {"choices":[],"usage":{"prompt_tokens":6400,"completion_tokens":3200,"prompt_tokens_details":{"cached_tokens":6000},"completion_tokens_details":{"reasoning_tokens":3000}}}
+
+            data: [DONE]
+        """.trimIndent()
+        val u = client.extractUsage(sse, anthropic = false, stream = true)
+        assertEquals(6400, u!!.promptTokens)
+        assertEquals(3200, u.completionTokens)
+        assertEquals(3000, u.reasoningTokens)
+        assertEquals(6000, u.cachedTokens)
+    }
+
+    @Test
+    fun `extractUsage Anthropic 流式合并 message_start 与 message_delta`() {
+        val client = newClient(OkHttpClient())
+        val sse = "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":5000,\"cache_read_input_tokens\":4500}}}\n\n" +
+            "data: {\"type\":\"message_delta\",\"usage\":{\"output_tokens\":800}}\n"
+        val u = client.extractUsage(sse, anthropic = true, stream = true)
+        assertEquals(5000, u!!.promptTokens)
+        assertEquals(4500, u.cachedTokens)
+        assertEquals(800, u.completionTokens)
+        assertNull("Anthropic 不单独暴露思考 token", u.reasoningTokens)
+    }
+
+    @Test
+    fun `buildRequestBody Kimi 流式带 stream_options include_usage`() {
+        val client = LlmClientImpl(
+            baseUrl = "https://api.moonshot.cn/v1", apiKey = "k", model = "kimi-k3.1-pro",
+            language = "zh", httpClient = OkHttpClient()
+        )
+        val obj = client.buildRequestBody(messages, jsonMode = true, withSeed = true, stream = true).jsonObject
+        assertTrue("应带 stream", obj.containsKey("stream"))
+        assertTrue("应带 stream_options", obj.containsKey("stream_options"))
+        assertTrue("include_usage 应为 true",
+            obj["stream_options"]!!.jsonObject["include_usage"]!!.jsonPrimitive.content.toBoolean())
+        // 非流式不带
+        assertFalse(client.buildRequestBody(messages, jsonMode = true, withSeed = true).jsonObject
+            .containsKey("stream_options"))
+    }
+
+    @Test
+    fun `buildRequestBody 非 Kimi 官方域名流式不带 stream_options`() {
+        // 托管 Kimi（方舟）与 Custom 网关可能不识别该字段报 400，宁缺勿滥不发
+        val doubao = LlmClientImpl(
+            baseUrl = "https://ark.cn-beijing.volces.com/api/v3", apiKey = "k",
+            model = "kimi-k3-1-pro", language = "zh", httpClient = OkHttpClient()
+        )
+        val hosted = doubao.buildRequestBody(messages, jsonMode = true, withSeed = true, stream = true).jsonObject
+        assertTrue("托管 Kimi 仍走流式", hosted.containsKey("stream"))
+        assertFalse("托管 Kimi（方舟）不带 stream_options", hosted.containsKey("stream_options"))
+        val custom = newClient(OkHttpClient())
+        assertFalse(custom.buildRequestBody(messages, jsonMode = false, withSeed = false, stream = true).jsonObject
+            .containsKey("stream_options"))
+    }
+
+    @Test
+    fun `usageSink 成功调用收到 usage 时延与 tag`() = runTest {
+        val stats = mutableListOf<LlmCallStat>()
+        val interceptor = Interceptor { chain ->
+            mockResponse(chain.request(), 200,
+                """{"choices":[{"message":{"content":"好了"}}],"usage":{"prompt_tokens":520,"completion_tokens":88}}""")
+        }
+        val client = LlmClientImpl(
+            baseUrl = "https://api.example.com/v1", apiKey = "k", model = "m",
+            language = "zh", httpClient = OkHttpClient.Builder().addInterceptor(interceptor).build(),
+            usageSink = { stats.add(it) }
+        )
+        assertEquals("好了", client.complete(messages, jsonMode = true, tag = "frame_model"))
+        assertEquals("恰好记录一条", 1, stats.size)
+        val s = stats[0]
+        assertEquals("frame_model", s.tag)
+        assertTrue("应成功", s.ok)
+        assertEquals(520, s.usage?.promptTokens)
+        assertEquals(88, s.usage?.completionTokens)
+        assertTrue("时延非负", s.ms >= 0)
+    }
+
+    @Test
+    fun `usageSink 调用失败也记 ok=false 且 token 未知`() = runTest {
+        val stats = mutableListOf<LlmCallStat>()
+        val interceptor = Interceptor { chain -> mockResponse(chain.request(), 500, "server error") }
+        val client = LlmClientImpl(
+            baseUrl = "https://api.example.com/v1", apiKey = "k", model = "m",
+            language = "zh", httpClient = OkHttpClient.Builder().addInterceptor(interceptor).build(),
+            usageSink = { stats.add(it) }
+        )
+        runCatching { client.complete(messages, jsonMode = true, tag = "polish") }
+        assertEquals("失败也应记录一条", 1, stats.size)
+        assertFalse(stats[0].ok)
+        assertNull("失败时 token 未知", stats[0].usage)
+    }
+
+    @Test
+    fun `usageSink 内部抛异常不影响主流程`() = runTest {
+        val interceptor = Interceptor { chain ->
+            mockResponse(chain.request(), 200,
+                """{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":1,"completion_tokens":1}}""")
+        }
+        val client = LlmClientImpl(
+            baseUrl = "https://api.example.com/v1", apiKey = "k", model = "m",
+            language = "zh", httpClient = OkHttpClient.Builder().addInterceptor(interceptor).build(),
+            usageSink = { throw RuntimeException("落盘失败") }
+        )
+        assertEquals("sink 抛异常也应正常返回内容", "ok", client.complete(messages, jsonMode = true))
+    }
+
+    @Test
+    fun `llmUsageJsonLine 字段口径与缺省省略`() {
+        val line = llmUsageJsonLine(
+            LlmCallStat(
+                tag = "frame_model", model = "kimi-k3.1-pro", provider = "Kimi", effort = "high",
+                stream = true, ms = 1234, ok = true, retried = false,
+                usage = LlmUsage(5200, 3100, 2900, 4800)
+            ),
+            ts = 1700000000000L
+        )
+        val obj = AppJson.parseToJsonElement(line).jsonObject
+        assertEquals(1700000000000L, obj["ts"]!!.jsonPrimitive.content.toLong())
+        assertEquals("frame_model", obj["tag"]!!.jsonPrimitive.content)
+        assertTrue(obj["stream"]!!.jsonPrimitive.content.toBoolean())
+        val u = obj["usage"]!!.jsonObject
+        assertEquals(5200, u["prompt"]!!.jsonPrimitive.content.toInt())
+        assertEquals(3100, u["completion"]!!.jsonPrimitive.content.toInt())
+        assertEquals(2900, u["reasoning"]!!.jsonPrimitive.content.toInt())
+        assertEquals(4800, u["cached"]!!.jsonPrimitive.content.toInt())
+        // usage=null（失败调用）→ 省略 usage 字段，与 0 区分
+        val noU = AppJson.parseToJsonElement(
+            llmUsageJsonLine(LlmCallStat(null, "m", "Custom", "high", false, 10, false, false, null), 1)
+        ).jsonObject
+        assertFalse("无 usage 应省略字段", noU.containsKey("usage"))
+        assertFalse("无 tag 应省略字段", noU.containsKey("tag"))
+    }
+
+    // ------------------------------------------------------------------
+    // P-03 分档：withReasoningEffort 与重试自动升 high
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `withReasoningEffort 复制指定档的新客户端且不影响原客户端`() {
+        val low = LlmClientImpl(
+            baseUrl = "https://api.moonshot.cn/v1", apiKey = "k", model = "kimi-k3.1-pro",
+            reasoningEffort = "low", language = "zh", httpClient = OkHttpClient()
+        )
+        val high = low.withReasoningEffort("high") as LlmClientImpl
+        val bLow = low.buildRequestBody(messages, jsonMode = true, withSeed = true).jsonObject
+        val bHigh = high.buildRequestBody(messages, jsonMode = true, withSeed = true).jsonObject
+        assertEquals("low", bLow["reasoning_effort"]!!.jsonPrimitive.content)
+        assertEquals("high", bHigh["reasoning_effort"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `parseFrameWithRetry 首轮用配置档 重试自动升 high`() = runTest {
+        val tracker = EffortTrackingClient()
+        runCatching { AiParser.parseFrameWithRetry(tracker, messages) }
+        // 首轮原客户端（effort=null 表示沿用配置档）；结构失败后的重试必须走 high 副本
+        assertEquals(listOf<String?>(null, "high"), tracker.efforts)
+    }
+
+    /** 记录每次 complete 调用所用思考档的假客户端（withReasoningEffort 返回共享记录的副本） */
+    private class EffortTrackingClient(
+        private val effort: String? = null,
+        val efforts: MutableList<String?> = mutableListOf()
+    ) : AiClient {
+        override fun withReasoningEffort(e: String): AiClient = EffortTrackingClient(e, efforts)
+        override suspend fun complete(
+            messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?
+        ): String {
+            efforts.add(effort)
+            return "not json" // 触发结构错误重试路径
+        }
     }
 
     private fun requestText(chain: Interceptor.Chain): String {

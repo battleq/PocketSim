@@ -83,7 +83,7 @@ class MaterialLookup(private val aiClientProvider: suspend () -> AiClient) {
 
         val content = client.complete(
             listOf(LlmMessage("system", system), LlmMessage("user", "材料：$query")),
-            jsonMode = true
+            jsonMode = true, tag = "material_lookup"
         )
 
         val jsonText = AiParser.extractJson(content)

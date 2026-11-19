@@ -60,7 +60,7 @@ class ChatSessionCandidateTest {
     /** 按 seedOverride 映射响应的假客户端，并记录所有 seedOverride（基准 = null） */
     private fun seedClient(baseSeed: Int, responseFor: (Int?) -> String) = object : AiClient {
         val seedOverrides = mutableListOf<Int?>()
-        override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?): String {
+        override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?): String {
             seedOverrides.add(seedOverride)
             return responseFor(seedOverride)
         }
@@ -128,7 +128,7 @@ class ChatSessionCandidateTest {
         var got: List<ModelCandidate>? = null
         val client = object : AiClient {
             override suspend fun complete(
-                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?
+                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?
             ): String {
                 // baseSeed=100：seed 101 的槽位首次与重试（111）都失败，另一个候选正常
                 if (seedOverride == 101 || seedOverride == 111) throw RuntimeException("boom")
@@ -149,7 +149,7 @@ class ChatSessionCandidateTest {
         var got: List<ModelCandidate>? = null
         val client = object : AiClient {
             override suspend fun complete(
-                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?
+                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?
             ): String {
                 if (seedOverride == 101) throw RuntimeException("偶发超时")
                 return ready2Node
@@ -172,7 +172,7 @@ class ChatSessionCandidateTest {
         var baseAsked = false
         val client = object : AiClient {
             override suspend fun complete(
-                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?
+                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?
             ): String {
                 if (seedOverride == null && !baseAsked) {
                     baseAsked = true
@@ -284,7 +284,7 @@ class ChatSessionCandidateTest {
         val events = mutableListOf<Pair<Int?, String>>()
         val client = object : AiClient {
             override suspend fun complete(
-                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?
+                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?
             ): String {
                 events.add(seedOverride to "start")
                 delay(1000) // 挂起 > 补全错峰 300ms，使基准与补全在虚拟时间上交错
@@ -319,7 +319,7 @@ class ChatSessionCandidateTest {
         val callLog = mutableListOf<Pair<Int?, List<LlmMessage>>>()
         val client = object : AiClient {
             override suspend fun complete(
-                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?
+                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?
             ): String {
                 callLog.add(seedOverride to messages)
                 // baseSeed=100：槽1 首次(101)失败 → 触发带观测的重试(111)，其余成功
@@ -392,7 +392,7 @@ class ChatSessionCandidateTest {
         val askJson = """{"ready":false,"questions":["材料是什么？"],"answer":""}"""
         val client = object : AiClient {
             override suspend fun complete(
-                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?
+                messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?
             ): String {
                 delay(10)
                 return askJson

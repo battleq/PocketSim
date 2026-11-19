@@ -18,7 +18,7 @@ class TextPolisherTest {
         private val delayMs: Long = 0
     ) : AiClient {
         var lastMessages: List<LlmMessage> = emptyList()
-        override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?): String {
+        override suspend fun complete(messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?): String {
             lastMessages = messages
             if (delayMs > 0) delay(delayMs)
             error?.let { throw it }
