@@ -597,19 +597,26 @@ class OptimizeSession(
               "disclaimer": "AI 辅助建议，不能替代正规工程验算"
             }
 
-            优化策略（必须遵守）：
-            - 优先通过【结构形式】调整解决问题：增加杆件、斜撑、支撑、加劲肋，
-              加大关键截面的高度或宽度，缩短跨度，改善连接节点等；
+            优化策略（必须遵守，按优先级顺序思考）：
+            - 三级手段，优先级从高到低：
+              ① 体系级改造（改变受力机制，最高效）：简支梁→连续梁（增设中间支座或延伸多跨，
+              大幅削减跨中弯矩）；梁→桁架/拱（把弯曲转为轴向拉压，充分发挥材料承载力）；
+              增设中柱/支撑缩短计算跨度；改变传力路径（增设斜撑/拉杆把荷载引向更刚的路径）；
+              ② 构件级调整：加大关键截面的高度或宽度，增设斜撑/加劲肋，改善连接节点；
+              ③ 材料级兜底：只有当①②都无法把结论提升到安全（安全系数 ≥ 2.0）时，
+              才允许更换为更高强度的材料——换材料不要作为首选。
+            - 先诊断失效模式再选手段：弯曲/挠度主导→优先连续梁/桁架/缩短跨度等体系级改造；
+              局部应力集中→优先加劲肋/改善连接等构件级手段；
             - 目标只需把安全系数提高到【超过安全阈值（≥ 2.0）】即可，达标即止，
               不要为追求过高的安全余量而过度设计、堆砌构件或大幅放大截面；
-            - 尽量保留原结构材料；只有当纯结构形式调整无法把结论提升到安全（安全系数 ≥ 2.0）时，
-              才允许更换为更高强度的材料——换材料仅作兜底手段，不要作为首选；
-            - 若给出多个方案，至少有一个方案只改结构形式、不更换材料。
+            - 若给出多个方案，应覆盖不同层级的手段，且至少有一个是体系级改造；
+              该结构确实无法体系级改造时，至少有一个方案只改结构形式、不更换材料。
 
             硬性约束（违反则方案无效）：
             1. 每个方案必须给出【完整新模型】（不是增量补丁），沿用原模型的节点/杆件编号习惯；
                新增杆件/构件必须是模型中真实存在的几何，不能只在文字里描述；
-            2. 只允许改结构：加大关键截面、换更高强度材料、增设支撑/斜撑、缩短跨度、改善连接；
+            2. 只允许改结构：体系级改造（简支→连续、梁→桁架/拱、增设中柱/支撑缩短跨度、
+               改变传力路径）、加大关键截面、增设斜撑/加劲肋、改善连接；换更高强度材料仅作兜底；
             3. 【严禁】减少载荷、放松或删除原有约束、降低安全要求——这属于作弊；
             4. 材料只能从材料库中选各向同性的常用材料（钢、铝合金、混凝土等）；
                禁止推荐木材、复合材料等各向异性材料（当前求解器只支持各向同性）；
@@ -633,24 +640,35 @@ class OptimizeSession(
               "disclaimer": "AI-assisted advice; not a substitute for formal engineering verification"
             }
 
-            Optimization strategy (must follow):
-            - Prefer structural-form changes first: add members, bracing, supports,
-              stiffeners; increase the depth or width of critical sections; shorten spans;
-              improve connections.
+            Optimization strategy (must follow, think in priority order):
+            - Three tiers of measures, highest priority first:
+              (1) System-level redesign (changes the load-transfer mechanism, most efficient):
+                  simply supported beam -> continuous beam (add intermediate supports or extend
+                  over multiple spans to cut mid-span bending moment); beam -> truss/arch (turn
+                  bending into axial tension/compression, exploiting the material's axial capacity);
+                  add intermediate columns/supports to shorten the effective span; reroute the load
+                  path (add bracing/ties so loads flow through stiffer paths);
+              (2) Member-level adjustment: increase the depth or width of critical sections,
+                  add bracing/stiffeners, improve connection nodes;
+              (3) Material-level fallback: only when (1) and (2) cannot reach safe (safety factor
+                  >= 2.0) may you switch to a stronger material — never the first move.
+            - Diagnose the failure mode first, then pick measures: bending/deflection dominated ->
+              prefer system-level redesign (continuous beam, truss, shorter spans); local stress
+              concentration -> prefer member-level measures (stiffeners, better connections).
             - The goal is only to raise the safety factor ABOVE the threshold (>= 2.0).
               Stop once it passes; do NOT over-design for extra margin (no piling up members
               or grossly oversized sections).
-            - Keep the original material whenever possible. Only when structural-form changes
-              alone cannot reach safe (safety factor >= 2.0) may you switch to a stronger
-              material — material change is a fallback, not the first move.
-            - If you return multiple options, at least one must change only the structural
-              form and keep the original material.
+            - If you return multiple options, cover different tiers; at least one must be a
+              system-level redesign (if system-level redesign is infeasible for this structure,
+              at least one must change only the structural form and keep the original material).
 
             Hard constraints (violating them invalidates the option):
             1. Each option MUST provide the COMPLETE new model (not a patch), keeping the original
                node/member numbering conventions; added members must exist in the model geometry;
-            2. Only structural changes are allowed: enlarge critical sections, use stronger material,
-               add supports/bracing, shorten spans, improve connections;
+            2. Only structural changes are allowed: system-level redesign (simply supported ->
+               continuous, beam -> truss/arch, add intermediate columns/supports to shorten spans,
+               reroute load paths), enlarge critical sections, add bracing/stiffeners, improve
+               connections; stronger material is a fallback only;
             3. NEVER reduce loads, relax or remove existing constraints — that is cheating;
             4. Materials must be isotropic and from the built-in library (steel, aluminum, concrete);
                do NOT recommend wood or composites (the solver is isotropic-only);

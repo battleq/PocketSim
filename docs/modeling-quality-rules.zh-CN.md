@@ -1,6 +1,6 @@
 # PocketSim 建模质量规则（Modeling Quality Rules）
 
-> 版本：v3（2026-11-19，随「提示词成本测量」轮更新，新增 P 类与 §7）｜上一版：v2（2026-11-18，随 P0→P2 修复轮更新）｜适用范围：AI 建模全链路（ChatSession、
+> 版本：v4（2026-11-20，随「优化方案体系级改造」轮更新，新增 O 类与 §四·六）｜上一版：v3（2026-11-19，新增 P 类与 §7）｜适用范围：AI 建模全链路（ChatSession、
 > FrameFollowUpSession、模板流 ParamForm/run_scenario）与全部求解入口（frame/frame3d/flow/
 > seepage/transient/solid/solid_generic/shell_vessel/shell_buried_pipe）。
 > 本文是规则的唯一现行版本；历史 .doc 仅存档，不再维护。
@@ -113,6 +113,16 @@
 | P-05 | M | 成本可观测性：每次 LLM 调用记录 usage（prompt/completion/reasoning/cached tokens + 时延），调试包写 `{dataDir}/llm_stats.jsonl`（开关同 caseLogEnabled，正式包零开销） | 任何提示词/候选/重试策略改动必须附改动前后调用级对比数据；离线估算（±30%）只作初步参考，以真机 usage 为准。状态：**采集层已实施**（2026-11-19）——`LlmClient.kt` 解析 OpenAI/Anthropic 两口径 usage（Kimi 官方域名流式自动带 `stream_options.include_usage`），`AppContainer.kt` 仅调试包落盘；调用带 `tag`（frame_model/followup/template_parse/material_lookup/optimize/polish）区分通道；失败调用也记 ok=false（时延已知、token 未知）。待真机采集数据替换 §7 假设档位 |
 | P-06 | S | 历史瘦身：当前 assistant 完整模型 JSON 写入 LLM history，后续每次调用重复付费 | 目标：历史只存结果摘要（kind+关键字段），完整模型存会话状态；实施前需埋点验证多轮一次通过率不劣化。状态：未实施 |
 
+## 四·六、O 类：优化策略（v4 新增）
+
+适用 AI 优化通道（`OptimizeSession`，tag=optimize，frame/solid_generic）：计算结论为「注意/危险」（安全系数不足）时产出的优化方案必须遵守下列策略规则。背景：此前方案几乎只从"加大受力截面 + 更换材料"入手，属于最笨的两档手段；改变受力机制的体系级改造（简支→连续、梁→桁架等）往往以少量材料换取数倍承载力，必须优先。optimize 通道静态前缀现约 1k tok，远低于 P-01 的 7k 上限，策略菜单可直接落提示词散文（`PROMPT_ZH`/`PROMPT_EN`）。
+
+| 编号 | 强度 | Condition | Action / Criterion / Evidence |
+|------|------|-----------|-------------------------------|
+| O-01 | M | 安全系数不足时产出优化方案 | 按三级优先级思考：**体系级**（改变受力机制/结构体系）＞**构件级**（加大截面、增设斜撑/加劲肋、改善连接）＞**材料级**（换更高强度材料，仅兜底）。判据：首个方案必须是结构形式调整且保留原材料；不得以"加大截面/换材料"为唯一手段；换材料只允许在结构手段用尽后出现。Evidence：方案 desc/changes 写明所用手段层级 |
+| O-02 | M | 诊断为弯曲/挠度/屈曲主导（大跨受弯构件等），或要求多方案（≥2 个） | 先评估体系级改造菜单：①简支→连续（增设中间支座或延伸多跨，削减跨中正弯矩）；②梁→桁架/拱（弯曲转为轴力拉压，发挥材料轴向承载力）；③增设中柱/支撑缩短计算跨度；④改变传力路径（增设斜撑/拉杆把荷载引向更刚的路径）。判据：多方案时至少一个为体系级改造；该结构确实无法体系级改造时退化为"至少一个方案只改结构形式、不换材料"。Evidence：desc 说明受力机制的改变及其为何更高效 |
+| O-03 | M | 体系级改造方案进入有限元重算验证 | 必须通过 `OptimizeDiff` 防作弊校验：新增中间支撑/杆件合法（`supportRelaxed` 只拦"减少原有约束"）；杆件拆分（梁→桁架）按几何匹配+共线子段识别为"修改"而非整段新增；载荷签名（`loadSignature`）不得变化。判据：`loadOrSupportChanged=false` 且重算可解。Evidence：校验失败原因在 HUD 明示；减载/松约束一律判作弊 |
+
 ## 五、新增/变更入口的检查单
 
 新增一个求解器或建模路径时，必须逐项确认：
@@ -125,6 +135,7 @@
 6. 重试路径是否受全局预算约束（RTR-01）；
 7. 是否有对应测试：Python 闭式解/校核测试 + Kotlin 校验/注入测试。
 8. 是否改动静态前缀/思考档/调用乘数？改动前跑 `PromptTokenBudgetTest` 对照 P 类规则（P-01/P-02/P-04），改动后按 P-05 补对比数据。
+9. 优化通道方案是否遵守 O 类三级策略（体系级优先、材料兜底，O-01/O-02），体系级改造能否通过 `OptimizeDiff` 防作弊校验（O-03）？
 
 ## 六、代码镜像位置速查
 
@@ -139,6 +150,7 @@
 | 重试预算 RTR-01 | `AiParser.parseFrameWithRetry`（`MAX_SEMANTIC_RETRIES`、`MAX_TOTAL_ATTEMPTS`） | — |
 | 案例埋点 LOG-01 | `PythonBridge.kt`、`ChatSession.newCaseMeta()` | `bridge.py`、`case_log.py` |
 | 提示词与成本 P 类 | `ChatSession.kt`（提示词常量）、`FrameOutputSchema.kt`、`LlmClient.kt`（reasoning_effort、usage 采集 `extractUsage`/`LlmCallStat`）、`AppContainer.kt`（llm_stats.jsonl 落盘接线）、`SettingsRepository.kt`（默认档）、`PromptTokenBudgetTest.kt`（离线测量）、`LlmClientTest.kt`（采集层测试） | — |
+| 优化策略 O 类 | `OptimizeLogic.kt`（`OptimizeSession` `PROMPT_ZH`/`PROMPT_EN` 策略段与硬性约束、`OptimizeDiff` 防作弊校验） | — |
 
 ## 七、初步测量数据（2026-11-19，JVM harness 离线估算）
 
