@@ -806,6 +806,8 @@
     <string name="settings_optimize_count">优化方案数量</string>
     <string name="settings_optimize_count_hint">仅当结果为「注意」或「危险」时，结果页才出现优化入口；方案越多，AI 调用与重算耗时越长。</string>
     <string name="settings_optimize_count_fmt">%1$d 个</string>
+    <string name="settings_optimize_fast">AI 优化快速模式</string>
+    <string name="settings_optimize_fast_hint">优化时尽量关闭模型深度思考，显著缩短等待；方案质量由程序校验与有限元重算兜底。关闭则沿用建模通道的思考强度。</string>
     <string name="optimize_button">AI 优化方案</string>
     <string name="optimize_title">AI 优化方案</string>
     <string name="optimize_back">返回</string>

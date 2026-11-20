@@ -173,16 +173,20 @@ class ChatSession(
                 "supports, materials and the dim (2D/3D) must NOT change unless the user asked for it. " +
                 "Do NOT redraw the whole structure and do NOT change the dimension or re-estimate sizes " +
                 "on your own. Only modify the fields the user requested, then output the COMPLETE updated " +
-                "model JSON.\nCurrent model:\n")
+                "model JSON. The model omits default-valued fields (zero coordinates/components, empty " +
+                "arrays, load type=force, support type=pinned, shape=rect) — treat them as their defaults " +
+                "and omit them in your output too.\nCurrent model:\n")
         } else {
             append("【修改模型·强锚定】用户正在已有模型基础上修改。下面的当前模型 JSON 是固定基准：" +
                 "你必须保持用户未明确要求改动的内容完全不变——节点、杆件连接、坐标、支座、材料、" +
                 "dim 维度（2D/3D）都不得自行变更，严禁整体重画、严禁在用户未要求时改变维度或重新估计尺寸。" +
-                "只修改用户指定的字段，然后输出修改后的【完整】模型 JSON。\n当前模型：\n")
+                "只修改用户指定的字段，然后输出修改后的【完整】模型 JSON。" +
+                "模型已省略取默认值的字段（坐标/分量为 0、空数组、载荷 type=force、支座 type=pinned、截面 shape=rect），" +
+                "请按默认值理解，你输出时也照此省略。\n当前模型：\n")
         }
         // 锚定块只放几何/材料/约束信息，避免把案例埋点上下文（_case_meta）泄露给 LLM
-        // （PromptJson 省略 null 键，"_case_meta":null 也不出现）
-        append(PromptJson.encodeToString(FrameModel.serializer(), model.copy(case_meta = null)))
+        // （LeanPromptJson 省略 null 键与默认值字段，解析端按数据类默认值补回，语义不变）
+        append(LeanPromptJson.encodeToString(FrameModel.serializer(), model.copy(case_meta = null)))
     }
 
     /**

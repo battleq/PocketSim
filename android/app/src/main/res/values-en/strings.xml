@@ -805,6 +805,8 @@
     <string name="settings_optimize_count">Number of options</string>
     <string name="settings_optimize_count_hint">The optimize entry appears only when the verdict is caution or danger; more options mean longer AI and re-solve time.</string>
     <string name="settings_optimize_count_fmt">%1$d</string>
+    <string name="settings_optimize_fast">Fast mode for AI optimization</string>
+    <string name="settings_optimize_fast_hint">Turns off deep thinking where the provider supports it to cut wait time; quality is backed by app validation and FE re-solve. Turn off to reuse the modeling reasoning effort.</string>
     <string name="optimize_button">AI optimization</string>
     <string name="optimize_title">AI optimization</string>
     <string name="optimize_back">Back</string>

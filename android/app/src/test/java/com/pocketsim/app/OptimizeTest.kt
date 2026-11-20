@@ -1,5 +1,8 @@
 package com.pocketsim.app
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -112,8 +115,57 @@ class OptimizeTest {
                     {"id":9,"i":6,"j":7,"width_b":30,"depth_h":40,"material":"松木"}],
          "supports":[{"node":1,"type":"fixed"},{"node":2,"type":"fixed"}],
          "loads":[{"type":"force","node":5,"fx":0,"fy":-294},
-                  {"type":"udl","member":1,"qy":-0.3}]}
+                  {"type":"udl","member":7,"qy":-0.3},{"type":"udl","member":8,"qy":-0.3}]}
     """.trimIndent()
+
+    /** 简支梁 → 增设中间支座的连续梁：udl 随拆分子段重新挂载，强度与合力不变 */
+    private val beamModel = """
+        {"name":"简支梁","dim":2,
+         "nodes":[{"id":1,"x":0,"y":0},{"id":2,"x":4000,"y":0}],
+         "members":[{"id":1,"i":1,"j":2,"width_b":100,"depth_h":200,"material":"Q235钢"}],
+         "supports":[{"node":1,"type":"pinned"},{"node":2,"type":"roller"}],
+         "loads":[{"type":"udl","member":1,"qy":-5}]}
+    """.trimIndent()
+
+    private val continuousModel = """
+        {"name":"两跨连续梁","dim":2,
+         "nodes":[{"id":1,"x":0,"y":0},{"id":2,"x":4000,"y":0},{"id":3,"x":2000,"y":0}],
+         "members":[{"id":1,"i":1,"j":3,"width_b":100,"depth_h":200,"material":"Q235钢"},
+                    {"id":2,"i":3,"j":2,"width_b":100,"depth_h":200,"material":"Q235钢"}],
+         "supports":[{"node":1,"type":"pinned"},{"node":2,"type":"roller"},{"node":3,"type":"roller"}],
+         "loads":[{"type":"udl","member":1,"qy":-5},{"type":"udl","member":2,"qy":-5}]}
+    """.trimIndent()
+
+    @Test
+    fun `FrameProfile 识别单跨简支梁并给出编号起点`() {
+        val p = FrameProfile.describe(frame(beamModel), english = false)
+        assertTrue(p.contains("单跨简支梁"))
+        assertTrue(p.contains("最大节点号 2"))
+        assertTrue(p.contains("最大杆件号 1"))
+        assertTrue(p.contains("L=4000 mm 水平"))
+    }
+
+    @Test
+    fun `FrameProfile 识别悬臂与悬空水平跨`() {
+        val p = FrameProfile.describe(frame(baseModel), english = false)
+        // 4 号杆 3→5：节点 5 只连一根杆且无支座 → 悬臂
+        assertTrue(p.contains("#4 为悬臂"))
+        val en = FrameProfile.describe(frame(baseModel), english = true)
+        assertTrue(en.contains("cantilever"))
+    }
+
+    @Test
+    fun `diffFrame 简支改连续梁拆分杆件不算改载荷`() {
+        val diff = OptimizeDiff.diffFrame(frame(beamModel), frame(continuousModel))
+        assertFalse(diff.loadOrSupportChanged)
+    }
+
+    @Test
+    fun `diffFrame 拆分后漏挂一段均布载荷判为改载荷`() {
+        val dropped = continuousModel.replace(",{\"type\":\"udl\",\"member\":2,\"qy\":-5}", "")
+        val diff = OptimizeDiff.diffFrame(frame(beamModel), frame(dropped))
+        assertTrue(diff.loadOrSupportChanged)
+    }
 
     @Test
     fun `diffFrame 拆分横杆判为修改而不是新增`() {
@@ -294,5 +346,136 @@ class OptimizeTest {
         assertEquals(1, OptimizeSession({ FakeAiClient(emptyList()) }, target, 0) {
             VerificationResult(false)
         }.count)
+    }
+
+    @Test
+    fun `leanModelJson 省略默认字段且往返语义不变`() {
+        val base = frame(baseModel)
+        val full = AppJson.encodeToString(FrameModel.serializer(), base)
+        val lean = OptimizeSession.leanModelJson(OptimizeKind.FRAME, full)
+        assertTrue(lean.length < full.length)
+        assertFalse(lean.contains("outer_diameter_mm"))
+        assertEquals(base.copy(case_meta = null), AppJson.decodeFromString(FrameModel.serializer(), lean))
+    }
+
+    @Test
+    fun `OptimizeSession 多方案逐个并发请求并按序合并`() = runTest {
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
+            summary = "危险",
+            before = OptimizeMetrics(safetyFactor = 1.0)
+        )
+        val fake = FakeAiClient(listOf(replyJson(optimizedModel), replyJson(optimizedModel)))
+        val session = OptimizeSession(
+            aiClientProvider = { fake },
+            target = target,
+            suggestionCount = 2,
+            verifier = {
+                VerificationResult(ok = true, afterModelJson = it.modelJson!!, afterMetrics = OptimizeMetrics(safetyFactor = 2.2))
+            }
+        )
+        session.run()
+        val done = session.state.value as OptimizeState.Done
+        assertEquals(2, fake.calls.size)
+        assertTrue(fake.calls[0].last().content.contains("方案 1"))
+        assertTrue(fake.calls[1].last().content.contains("方案 2"))
+        assertEquals(2, done.verified.size)
+    }
+
+    @Test
+    fun `OptimizeSession 快速模式把优化通道切到 none 思考档`() = runTest {
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
+            summary = "危险",
+            before = OptimizeMetrics(safetyFactor = 1.0)
+        )
+        val efforts = mutableListOf<String?>()
+        val session = OptimizeSession(
+            aiClientProvider = { EffortFake(replyJson(optimizedModel), efforts) },
+            target = target,
+            suggestionCount = 1,
+            fastMode = true,
+            verifier = {
+                VerificationResult(ok = true, afterModelJson = it.modelJson!!, afterMetrics = OptimizeMetrics(safetyFactor = 2.5))
+            }
+        )
+        session.run()
+        assertTrue(session.state.value is OptimizeState.Done)
+        assertEquals(listOf("none"), efforts)
+    }
+
+    @Test
+    fun `OptimizeSession 关闭快速模式沿用原客户端思考档`() = runTest {
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
+            summary = "危险",
+            before = OptimizeMetrics(safetyFactor = 1.0)
+        )
+        val efforts = mutableListOf<String?>()
+        val session = OptimizeSession(
+            aiClientProvider = { EffortFake(replyJson(optimizedModel), efforts) },
+            target = target,
+            suggestionCount = 1,
+            fastMode = false,
+            verifier = {
+                VerificationResult(ok = true, afterModelJson = it.modelJson!!, afterMetrics = OptimizeMetrics(safetyFactor = 2.5))
+            }
+        )
+        session.run()
+        // 未调用 withReasoningEffort：记录到的 current 为 null（沿用配置档）
+        assertEquals(listOf<String?>(null), efforts)
+    }
+
+    @Test
+    fun `OptimizeSession 多方案流水线先完成先呈现且按编号顺序合并`() = runTest {
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
+            summary = "危险",
+            before = OptimizeMetrics(safetyFactor = 1.0)
+        )
+        // 方案 1 的求解验证慢（1s）、方案 2 快：方案 2 应先进入 Running，Done 仍按 1→2 排序
+        val fake = FakeAiClient(
+            listOf(
+                replyJson(optimizedModel).replace("新增斜撑0", "慢方案"),
+                replyJson(optimizedModel).replace("新增斜撑0", "快方案")
+            )
+        )
+        val session = OptimizeSession(
+            aiClientProvider = { fake },
+            target = target,
+            suggestionCount = 2,
+            fastMode = false,
+            verifier = { s ->
+                if (s.title == "慢方案") delay(1000)
+                VerificationResult(ok = true, afterModelJson = s.modelJson!!, afterMetrics = OptimizeMetrics(safetyFactor = 2.2))
+            }
+        )
+        val states = mutableListOf<OptimizeState>()
+        val collect = launch { session.state.toList(states) }
+        session.run()
+        collect.cancel()
+        val partials = states.filterIsInstance<OptimizeState.Running>().map { r -> r.verified.map { it.suggestion.title } }
+        assertTrue("方案 2 完成后应立即以 Running 呈现", partials.contains(listOf("快方案")))
+        val done = session.state.value as OptimizeState.Done
+        assertEquals(listOf("慢方案", "快方案"), done.verified.map { it.suggestion.title })
+    }
+
+    /** 记录 withReasoningEffort 切档、固定返回优化回复的假客户端（efforts 跨副本共享） */
+    private class EffortFake(
+        private val reply: String,
+        val efforts: MutableList<String?> = mutableListOf(),
+        private val current: String? = null
+    ) : AiClient {
+        override fun withReasoningEffort(effort: String): AiClient = EffortFake(reply, efforts, effort)
+        override suspend fun complete(
+            messages: List<LlmMessage>, jsonMode: Boolean, seedOverride: Int?, tag: String?
+        ): String {
+            efforts.add(current)
+            return reply
+        }
     }
 }

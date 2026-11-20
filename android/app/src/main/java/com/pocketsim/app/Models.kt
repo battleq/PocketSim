@@ -37,6 +37,16 @@ val PromptJson: Json = Json(from = AppJson) {
     explicitNulls = false
 }
 
+/**
+ * 提示词精简序列化：在 PromptJson 基础上再省略取默认值的字段（编码端）。
+ * 解析端由数据类默认值自动补回，模型语义不变；用于把当前模型 JSON 注入
+ * LLM 提示词（建模锚定块 / 追问上下文 / AI 优化），显著减少输入与照抄输出 token。
+ * 与求解契约无关——bridge 调用仍用 AppJson（必须保留全部字段与 _case_meta 键名）。
+ */
+val LeanPromptJson: Json = Json(from = PromptJson) {
+    encodeDefaults = false
+}
+
 // =====================================================================
 // 模板与参数 schema（对应 pocketsim.bridge.list_templates 的返回元素）
 // =====================================================================

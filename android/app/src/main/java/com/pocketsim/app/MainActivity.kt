@@ -58,6 +58,9 @@ class MainActivity : ComponentActivity() {
         Units.init(this)
         enableEdgeToEdge()
         val container = AppContainer(applicationContext)
+        // 后台预热求解引擎：把 Python 启动 + numpy/scipy 加载（首次约数秒）提前到启动期，
+        // 用户进入 AI 建模/求解时不再等待冷启动（失败静默，求解时懒启动兜底）
+        container.warmUpEngine()
         setContent {
             PocketSimTheme {
                 AppRoot(container)

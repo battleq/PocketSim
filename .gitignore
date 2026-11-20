@@ -39,6 +39,9 @@ keystore.properties
 # 本地便携 Gradle 发行版（构建用，不入库）
 gradle-8.14/
 
+# 本地便携 Git（MinGit，工具用，不入库）
+MinGit/
+
 # GitHub 快照仓库（独立于 Gitee 的 .git，不入库）
 .git-github/
 

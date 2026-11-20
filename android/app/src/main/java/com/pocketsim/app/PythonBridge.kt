@@ -42,6 +42,9 @@ import kotlinx.serialization.builtins.ListSerializer
  * Python 侧参数/求解错误以异常抛出，这里转成 [FeaEngineException] 带回友好信息。
  */
 interface FeaEngine {
+    /** 预热引擎（启动求解运行时、预加载依赖）。默认空实现 = 无需预热（测试 fake 零改动）。 */
+    suspend fun warmUp() = Unit
+
     /** 场景模板列表（含参数 schema） */
     suspend fun listTemplates(): List<TemplateInfo>
 
@@ -149,6 +152,15 @@ class ChaquopyEngine(private val context: Context) : FeaEngine, ProblemParser {
             Python.start(AndroidPlatform(context.applicationContext))
         }
         Python.getInstance()
+    }
+
+    /**
+     * 预热引擎：触发 Python 启动与 pocketsim.bridge 模块导入（顶层 import numpy /
+     * from . import engine，会把 numpy/scipy/engine 一并加载），把首次求解的数秒
+     * 冷启动移到 App 启动后台。失败静默——真正调用时仍走 [python] 懒启动兜底。
+     */
+    override suspend fun warmUp(): Unit = withContext(Dispatchers.Default) {
+        runCatching { python().getModule("pocketsim.bridge") }
     }
 
     override suspend fun listTemplates(): List<TemplateInfo> = withContext(Dispatchers.Default) {

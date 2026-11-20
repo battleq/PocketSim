@@ -399,6 +399,28 @@ fun SettingsScreen(
                     )
                 }
             }
+            // O-06 快速模式：优化通道单独压低/关闭深度思考
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_optimize_fast),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_optimize_fast_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = settings.optimizeFastMode,
+                    onCheckedChange = { v -> scope.launch { repo.setOptimizeFastMode(v) } }
+                )
+            }
 
             // ---- 关于：版本 + 免责声明全文 ----
             Text(

@@ -87,7 +87,13 @@ data class AppSettings(
      */
     val highSpeedMode: Boolean = false,
     /** AI 结构优化建议的方案数量（1~3，默认 1） */
-    val optimizeSuggestionCount: Int = 1
+    val optimizeSuggestionCount: Int = 1,
+    /**
+     * O-06 AI 优化快速模式（默认开启）：优化通道单独把思考强度压到最低
+     * （reasoning_effort=none，Kimi 落 low，方舟/DeepSeek 原生关闭，Anthropic 默认不思考），
+     * 方案质量由客户端确定性校验 + 有限元重算兜底。关闭则沿用建模通道的思考强度设置。
+     */
+    val optimizeFastMode: Boolean = true
 ) {
     /** Base URL 与模型名齐备即视为已配置（Key 允许为空——本地代理场景） */
     val llmConfigured: Boolean get() = llmBaseUrl.isNotBlank() && llmModel.isNotBlank()
@@ -118,6 +124,7 @@ class SettingsRepository(private val context: Context) {
         val REASONING_EFFORT = stringPreferencesKey("llm_reasoning_effort")
         val HIGH_SPEED = booleanPreferencesKey("high_speed_mode")
         val OPTIMIZE_SUGGESTION_COUNT = intPreferencesKey("optimize_suggestion_count")
+        val OPTIMIZE_FAST_MODE = booleanPreferencesKey("optimize_fast_mode")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { p ->
@@ -149,7 +156,8 @@ class SettingsRepository(private val context: Context) {
                 if (it in setOf("low", "high", "max")) it else "high"
             },
             highSpeedMode = p[Keys.HIGH_SPEED] ?: false,
-            optimizeSuggestionCount = (p[Keys.OPTIMIZE_SUGGESTION_COUNT] ?: 1).coerceIn(1, 3)
+            optimizeSuggestionCount = (p[Keys.OPTIMIZE_SUGGESTION_COUNT] ?: 1).coerceIn(1, 3),
+            optimizeFastMode = p[Keys.OPTIMIZE_FAST_MODE] ?: true
         )
     }
 
@@ -228,6 +236,9 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setOptimizeSuggestionCount(v: Int) =
         context.settingsDataStore.edit { it[Keys.OPTIMIZE_SUGGESTION_COUNT] = v.coerceIn(1, 3) }
+
+    suspend fun setOptimizeFastMode(v: Boolean) =
+        context.settingsDataStore.edit { it[Keys.OPTIMIZE_FAST_MODE] = v }
 
     /** 取设备 ID；首次调用时生成并持久化（后续不变，服务端按它统计每日额度） */
     suspend fun ensureDeviceId(): String {

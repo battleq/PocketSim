@@ -63,9 +63,11 @@ class FrameFollowUpSession(
                     "（实心圆填 0），此时不写 width_b/depth_h，且圆管不支持开孔。"
             )
         }
-        append("\n\n当前模型（JSON，修改时以它为基准）：\n")
+        append("\n\n当前模型（JSON，修改时以它为基准；已省略取默认值的字段——坐标/分量为 0、空数组、" +
+            "载荷 type=force、支座 type=pinned、截面 shape=rect，请按默认值理解，改模型输出时也照此省略）：\n")
         // 案例埋点上下文（_case_meta）不进 LLM 提示词（规则 LOG-01 防泄露）
-        append(PromptJson.encodeToString(FrameModel.serializer(), model.copy(case_meta = null)))
+        // （LeanPromptJson 省略 null 键与默认值字段，解析端按数据类默认值补回，语义不变）
+        append(LeanPromptJson.encodeToString(FrameModel.serializer(), model.copy(case_meta = null)))
         append("\n\n本次分析结果摘要：\n")
         append(
             buildString {

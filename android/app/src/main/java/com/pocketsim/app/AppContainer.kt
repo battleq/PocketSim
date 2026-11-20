@@ -7,6 +7,10 @@
 package com.pocketsim.app
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -68,6 +72,17 @@ open class AppContainer(context: Context) {
             // usage 采集（P-05）：调试包写 llm_stats.jsonl，正式包为 null
             usageSink = llmUsageSink
         )
+    }
+
+    /** 进程级后台 scope（预热等不随 UI 销毁的任务） */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * 后台预热求解引擎（启动 Python + 预加载 numpy/scipy），消除首次建模/求解的冷启动等待。
+     * 幂等：Chaquopy 启动有锁，重复调用安全；失败静默（真正求解时走懒启动兜底）。
+     */
+    fun warmUpEngine() {
+        appScope.launch { runCatching { chaquopy.warmUp() } }
     }
 
     /** 材料联网检索 */

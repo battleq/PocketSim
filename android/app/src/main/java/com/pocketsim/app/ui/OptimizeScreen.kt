@@ -89,21 +89,20 @@ fun OptimizeScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val exportDoneTpl = stringResource(R.string.optimize_export_done_fmt)
-    val exportFailedTpl = stringResource(R.string.optimize_export_failed_fmt)
     val language = LocaleManager.currentLanguageCode(context)
     val english = language == LocaleStore.LANG_EN
     val settings by container.settingsRepository.settings.collectAsState(initial = null)
     var reload by remember { mutableStateOf(0) }
 
     val count = settings?.optimizeSuggestionCount ?: 1
-    val session = remember(count, reload) {
+    val fastMode = settings?.optimizeFastMode ?: true
+    val session = remember(count, fastMode, reload) {
         OptimizeSession(
             aiClientProvider = container.aiClientProvider,
             target = target,
             suggestionCount = count,
             language = language,
+            fastMode = fastMode,
             verifier = OptimizeRunner.verifier(
                 container.engine, target.kind, language == LocaleStore.LANG_EN
             )
@@ -150,6 +149,11 @@ fun OptimizeScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    // E 流水线：先完成的方案先展示，其余位置继续转圈等待
+                    if (s is OptimizeState.Running && s.verified.isNotEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        VerifiedList(s.verified, english)
+                    }
                 }
 
                 is OptimizeState.Failed -> {
@@ -176,32 +180,7 @@ fun OptimizeScreen(
                         }
                         Spacer(Modifier.height(12.dp))
                     }
-                    s.verified.forEachIndexed { index, item ->
-                        VerifiedCard(
-                            index = index + 1,
-                            item = item,
-                            english = english,
-                            labels = FigureLabels(
-                                title = stringResource(R.string.optimize_figure_title),
-                                // 图内只留标题；"B 级拟物化示意图"等说明文字不上图（用户要求）
-                                note = "",
-                                newLabel = stringResource(R.string.optimize_highlight_new),
-                                modifiedLabel = stringResource(R.string.optimize_highlight_mod),
-                                originalLabel = stringResource(R.string.optimize_legend_original)
-                            ),
-                            onExport = { bmp ->
-                                scope.launch {
-                                    val msg = try {
-                                        String.format(exportDoneTpl, exportPng(context, bmp))
-                                    } catch (e: Exception) {
-                                        String.format(exportFailedTpl, e.message ?: "unknown")
-                                    }
-                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        )
-                        Spacer(Modifier.height(16.dp))
-                    }
+                    VerifiedList(s.verified, english)
                     OutlinedButton(onClick = { reload += 1 }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.optimize_retry))
                     }
@@ -216,6 +195,41 @@ fun OptimizeScreen(
             )
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+/** 已验证方案卡片列表（Done 全量 / Running 逐个呈现共用） */
+@Composable
+private fun VerifiedList(verified: List<VerifiedOptimization>, english: Boolean) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val exportDoneTpl = stringResource(R.string.optimize_export_done_fmt)
+    val exportFailedTpl = stringResource(R.string.optimize_export_failed_fmt)
+    verified.forEachIndexed { index, item ->
+        VerifiedCard(
+            index = index + 1,
+            item = item,
+            english = english,
+            labels = FigureLabels(
+                title = stringResource(R.string.optimize_figure_title),
+                // 图内只留标题；"B 级拟物化示意图"等说明文字不上图（用户要求）
+                note = "",
+                newLabel = stringResource(R.string.optimize_highlight_new),
+                modifiedLabel = stringResource(R.string.optimize_highlight_mod),
+                originalLabel = stringResource(R.string.optimize_legend_original)
+            ),
+            onExport = { bmp ->
+                scope.launch {
+                    val msg = try {
+                        String.format(exportDoneTpl, exportPng(context, bmp))
+                    } catch (e: Exception) {
+                        String.format(exportFailedTpl, e.message ?: "unknown")
+                    }
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                }
+            }
+        )
+        Spacer(Modifier.height(16.dp))
     }
 }
 

@@ -583,6 +583,67 @@ class LlmClientTest {
     }
 
     @Test
+    fun `anthropicFallbackUrl 仅对 chat completions 地址给出 messages 候选`() {
+        assertEquals(
+            "https://g.example.com/v1/messages",
+            anthropicFallbackUrl("https://g.example.com/v1/chat/completions")
+        )
+        assertEquals(
+            null,
+            anthropicFallbackUrl("https://api.openai.com/v1/chat/completions/extra")
+        )
+        assertEquals(null, anthropicFallbackUrl("https://g.example.com/v1/messages"))
+    }
+
+    @Test
+    fun `complete 遇 502 网关错误时退避重试并回退 Anthropic 原生端点`() = runTest {
+        val urls = mutableListOf<String>()
+        val interceptor = Interceptor { chain ->
+            val url = chain.request().url.toString()
+            urls += url
+            if (url.endsWith("/messages")) {
+                mockResponse(
+                    chain.request(), 200,
+                    """{"id":"m1","type":"message","role":"assistant","content":[{"type":"text","text":"回退成功"}]}"""
+                )
+            } else {
+                mockResponse(chain.request(), 502, "error code: 502")
+            }
+        }
+        val client = LlmClientImpl(
+            baseUrl = "https://g.example.com/v1",
+            apiKey = "sk-abc",
+            model = "claude-haiku-5-5",
+            language = "zh",
+            httpClient = OkHttpClient.Builder().addInterceptor(interceptor).build()
+        )
+        val content = client.complete(messages, jsonMode = true)
+        assertEquals("应经 Anthropic 回退成功", "回退成功", content)
+        assertEquals("chat/completions 应尝试 2 次（原始+退避重试）", 2, urls.count { it.endsWith("/chat/completions") })
+        assertEquals("应回退到 /messages 一次", 1, urls.count { it.endsWith("/messages") })
+    }
+
+    @Test
+    fun `complete 非 Claude 模型 502 重试后仍失败并报可读错误`() = runTest {
+        var callCount = 0
+        val interceptor = Interceptor { chain ->
+            callCount++
+            mockResponse(chain.request(), 502, "error code: 502")
+        }
+        val client = LlmClientImpl(
+            baseUrl = "https://g.example.com/v1",
+            apiKey = "sk-abc",
+            model = "gpt-4o",
+            language = "zh",
+            httpClient = OkHttpClient.Builder().addInterceptor(interceptor).build()
+        )
+        val e = runCatching { client.complete(messages, jsonMode = true) }.exceptionOrNull()
+        assertNotNull("502 应最终抛错", e)
+        assertTrue("应带 HTTP 502 与提示", e!!.message.orEmpty().contains("HTTP 502"))
+        assertEquals("非 Claude 不应回退，只重试一次", 2, callCount)
+    }
+
+    @Test
     fun `complete 走 Anthropic 时发送 messages 与 x-api-key 并解析 content 文本`() = runTest {
         var seenUrl = ""
         var seenKey = ""
@@ -881,6 +942,29 @@ class LlmClientTest {
         val bHigh = high.buildRequestBody(messages, jsonMode = true, withSeed = true).jsonObject
         assertEquals("low", bLow["reasoning_effort"]!!.jsonPrimitive.content)
         assertEquals("high", bHigh["reasoning_effort"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `O-06 快速模式 Custom 网关带 reasoning_effort none 且 Kimi 落 low`() {
+        val custom = LlmClientImpl(
+            baseUrl = "https://relay.example.com/v1", apiKey = "k", model = "gpt-x",
+            reasoningEffort = "none", language = "zh", httpClient = OkHttpClient()
+        )
+        val withNone = custom.buildRequestBody(
+            messages, jsonMode = true, withSeed = false, includeReasoningNone = true
+        ).jsonObject
+        assertEquals("none", withNone["reasoning_effort"]!!.jsonPrimitive.content)
+        val without = custom.buildRequestBody(
+            messages, jsonMode = true, withSeed = false, includeReasoningNone = false
+        ).jsonObject
+        assertFalse("不带字段时不应出现 reasoning_effort", without.containsKey("reasoning_effort"))
+        // Kimi 不支持 none：始终思考，快速模式落到最低 low 档
+        val kimi = LlmClientImpl(
+            baseUrl = "https://api.moonshot.cn/v1", apiKey = "k", model = "kimi-k3.1-pro",
+            reasoningEffort = "none", language = "zh", httpClient = OkHttpClient()
+        )
+        val bKimi = kimi.buildRequestBody(messages, jsonMode = true, withSeed = false).jsonObject
+        assertEquals("low", bKimi["reasoning_effort"]!!.jsonPrimitive.content)
     }
 
     @Test

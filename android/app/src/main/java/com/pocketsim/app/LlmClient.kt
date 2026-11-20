@@ -154,6 +154,17 @@ internal fun resolveEndpoint(base: String): Endpoint? {
     }
 }
 
+/**
+ * OpenAI 兼容地址 → 同一中转站的 Anthropic 原生 /messages 地址（502 网关回退用，internal 便于单测）：
+ * 仅当 URL 以 /chat/completions 结尾时给出候选；中转站（如 ai0011）通常两套端点都开放，
+ * OpenAI→Claude 转换线路抖动 502 时，原生 /v1/messages 线路往往还能通。
+ */
+internal fun anthropicFallbackUrl(url: String): String? {
+    val suffix = "/chat/completions"
+    if (!url.lowercase().endsWith(suffix)) return null
+    return url.substring(0, url.length - suffix.length) + "/messages"
+}
+
 /** 从 data URI 拆出 (media_type, base64)；非 data URI 返回 null，由调用方按 jpeg 处理 */
 internal fun splitDataUri(uri: String): Pair<String, String>? {
     if (!uri.startsWith("data:")) return null
@@ -397,6 +408,8 @@ class LlmClientImpl(
      * @param plainJson true 时只靠提示词要 JSON：不发 response_format 与 seed。
      *   部分模型/网关（如经 OpenRouter 转发的 Claude）拒绝这两个字段，
      *   报「没有可处理当前参数的已配置线路」。
+     * @param includeReasoningNone O-06 快速模式：true 时对 Custom 网关直发 reasoning_effort=none；
+     *   网关不识别返回 4xx 后由 doRequest 去掉该字段重跑降级阶梯。
      */
     internal fun buildRequestBody(
         messages: List<LlmMessage>,
@@ -405,7 +418,8 @@ class LlmClientImpl(
         seedOverride: Int? = null,
         schema: JsonObject? = null,
         stream: Boolean = false,
-        plainJson: Boolean = false
+        plainJson: Boolean = false,
+        includeReasoningNone: Boolean = false
     ): JsonObject {
         val effModel = effectiveModel(messages)
         return buildJsonObject {
@@ -459,7 +473,8 @@ class LlmClientImpl(
             // Kimi 始终开启思考：建模通道按设置限制推理强度，
             // 避免 max 默认档拖慢多候选生成（3 候选 + 重试最多 6 次调用）。
             if (jsonMode && provider == LlmProvider.Kimi) {
-                put("reasoning_effort", reasoningEffort)
+                // Kimi 始终思考、不支持 none：快速模式落到最低 low 档
+                put("reasoning_effort", if (reasoningEffort == "none") "low" else reasoningEffort)
             }
             // DeepSeek 默认思考=high，建模抽取会被长时间思考拖慢（与旧版方舟同病）；
             // 显式 reasoning_effort=none 关闭思考以提速。该参数 DeepSeek /chat/completions
@@ -474,6 +489,12 @@ class LlmClientImpl(
             // 方舟上的 Kimi K3 系列始终思考、不支持该字段（传了报 400），按模型名跳过。
             if (provider == LlmProvider.Doubao && !effModel.lowercase().contains("kimi")) {
                 put("thinking", buildJsonObject { put("type", "disabled") })
+            }
+            // O-06 快速模式（优化通道）：Custom / 通用 OpenAI 兼容中转直发 reasoning_effort=none，
+            // 请求服务端关闭或压低深度思考；不识别该字段的网关由 doRequest 去字段重试兜底。
+            // Anthropic 协议请求体本就不带 thinking 参数（默认即关闭），无需处理。
+            if (includeReasoningNone && provider == LlmProvider.Custom) {
+                put("reasoning_effort", "none")
             }
         }
     }
@@ -509,13 +530,14 @@ class LlmClientImpl(
         schema: JsonObject? = null,
         stream: Boolean = false,
         protocol: ApiProtocol = ApiProtocol.OPENAI,
-        plainJson: Boolean = false
+        plainJson: Boolean = false,
+        includeReasoningNone: Boolean = false
     ): Completion {
         val anthropic = protocol == ApiProtocol.ANTHROPIC
         val body = if (anthropic) {
             buildAnthropicRequestBody(messages)
         } else {
-            buildRequestBody(messages, jsonMode, withSeed, seedOverride, schema, stream, plainJson)
+            buildRequestBody(messages, jsonMode, withSeed, seedOverride, schema, stream, plainJson, includeReasoningNone)
         }
         val request = newRequest(body, url, anthropic)
         return http.newCall(request).execute().use { resp ->
@@ -652,6 +674,16 @@ class LlmClientImpl(
                         "invite code\" (${reason.take(120)})"
                 )
             )
+        } else if (code in 502..504) {
+            IOException(
+                t(
+                    "LLM 接口返回 HTTP $code：$reason。中转/网关上游暂时不可用，" +
+                        "请确认模型名在该服务中存在（可在其官网查模型列表），或稍后再试",
+                    "LLM endpoint returned HTTP $code: $reason. The relay/gateway upstream is " +
+                        "temporarily unavailable. Verify the model name exists on that service, " +
+                        "or try again later"
+                )
+            )
         } else {
             IOException(
                 t(
@@ -684,76 +716,110 @@ class LlmClientImpl(
         val endpoint = resolveEndpoint(baseUrl) ?: throw IOException(
             t("API Base URL 无效：$baseUrl", "Invalid API base URL: $baseUrl")
         )
-        val url = endpoint.url
-        val anthropic = endpoint.protocol == ApiProtocol.ANTHROPIC
-        // 仅建模通道带 seed 降随机性；纯答疑不带（Anthropic 无 seed 字段）
-        val withSeed = jsonMode && !anthropic
-        // 思考型模型走流式（见 buildRequestBody 注释）：避免非流式网关/客户端超时。
-        // 按模型名兼容第三方托管的 Kimi（如火山方舟上的 kimi-k3-1-pro），
-        // 它们同样是始终思考的慢模型，非流式极易超时。
-        // Anthropic 通道不发 stream：与官方 curl 示例保持一致，中转网关对流式的支持不稳定。
         val modelName = model.lowercase()
-        val useStream = !anthropic && (provider == LlmProvider.Kimi || modelName.contains("kimi"))
-        // Anthropic 不支持 response_format，schema 只对 OpenAI 协议生效
-        val effSchema = if (anthropic) null else schema
-        // 经 OpenAI 兼容接口转发的 Claude（如 OpenRouter）会拒绝 response_format / seed，
-        // 直接从「纯提示词」参数起步，省掉一次必然失败的请求。
-        val plainPreferred = !anthropic &&
-            (modelName.contains("claude") || modelName.contains("anthropic"))
 
         // A3：是否为 Kimi 组织级并发限流（HTTP 429 或响应体含 rate_limit）
         fun isRateLimit(e: Throwable?): Boolean = e is HttpError &&
             (e.code == 429 || e.text.contains("rate_limit", ignoreCase = true))
+        // 网关 5xx（中转站包装上游抖动，如 ai0011 的 502）：与请求参数无关，可整请求重试
+        fun isGateway5xx(e: Throwable?): Boolean = e is HttpError && e.code in 502..504
 
-        fun doRequest(): Completion {
-            fun call(useSchema: Boolean, useSeed: Boolean, plain: Boolean): Result<Completion> = runCatching {
-                executeOnce(
-                    messages, jsonMode, useSeed, url,
-                    if (useSeed) seedOverride else null,
-                    if (useSchema) effSchema else null,
-                    stream = useStream,
-                    protocol = endpoint.protocol,
-                    plainJson = plain
-                )
-            }
+        /** 对指定端点跑一遍完整参数降级阶梯；协议相关参数按端点就地计算 */
+        fun doRequest(ep: Endpoint): Completion {
+            val anthropic = ep.protocol == ApiProtocol.ANTHROPIC
+            // 仅建模通道带 seed 降随机性；纯答疑不带（Anthropic 无 seed 字段）
+            val withSeed = jsonMode && !anthropic
+            // 思考型模型走流式（见 buildRequestBody 注释）：避免非流式网关/客户端超时。
+            // 按模型名兼容第三方托管的 Kimi（如火山方舟上的 kimi-k3-1-pro），
+            // 它们同样是始终思考的慢模型，非流式极易超时。
+            // Anthropic 通道不发 stream：与官方 curl 示例保持一致，中转网关对流式的支持不稳定。
+            val useStream = !anthropic && (provider == LlmProvider.Kimi || modelName.contains("kimi"))
+            // Anthropic 不支持 response_format，schema 只对 OpenAI 协议生效
+            val effSchema = if (anthropic) null else schema
+            // 经 OpenAI 兼容接口转发的 Claude（如 OpenRouter）会拒绝 response_format / seed，
+            // 直接从「纯提示词」参数起步，省掉一次必然失败的请求。
+            val plainPreferred = !anthropic &&
+                (modelName.contains("claude") || modelName.contains("anthropic"))
+
+            fun call(useSchema: Boolean, useSeed: Boolean, plain: Boolean, effortNone: Boolean): Result<Completion> =
+                runCatching {
+                    executeOnce(
+                        messages, jsonMode, useSeed, ep.url,
+                        if (useSeed) seedOverride else null,
+                        if (useSchema) effSchema else null,
+                        stream = useStream,
+                        protocol = ep.protocol,
+                        plainJson = plain,
+                        includeReasoningNone = effortNone
+                    )
+                }
             // 按「参数从多到少」依次降级，只对可重试 4xx 生效：
             // ① schema + seed → ② 去 schema → ③ 去 seed → ④ 纯提示词（去 response_format）
-            val attempts = buildList {
-                add(Triple(effSchema != null, withSeed, plainPreferred))
-                if (effSchema != null) add(Triple(false, withSeed, plainPreferred))
-                if (withSeed) add(Triple(false, false, plainPreferred))
-                if (jsonMode && !plainPreferred) add(Triple(false, false, true))
+            fun ladder(includeEffortNone: Boolean): Completion {
+                val attempts = buildList {
+                    add(Triple(effSchema != null, withSeed, plainPreferred))
+                    if (effSchema != null) add(Triple(false, withSeed, plainPreferred))
+                    if (withSeed) add(Triple(false, false, plainPreferred))
+                    if (jsonMode && !plainPreferred) add(Triple(false, false, true))
+                }
+                var lastError: Throwable? = null
+                attempts.forEach { (useSchema, useSeed, plain) ->
+                    val r = call(useSchema, useSeed, plain, includeEffortNone)
+                    r.getOrNull()?.let { return it }
+                    val e = r.exceptionOrNull()
+                    // 限流直接抛出，交给外层退避重试，不做无意义的参数降级
+                    if (isRateLimit(e)) throw e ?: IOException("rate limit")
+                    val retryable = (e is HttpError && isRetryable4xx(e.code)) || isParamReject(e)
+                    if (!retryable) throw e ?: IOException(t("LLM 请求失败", "LLM request failed"))
+                    lastError = e
+                }
+                throw lastError ?: IOException(t("LLM 请求失败", "LLM request failed"))
             }
-            var lastError: Throwable? = null
-            attempts.forEach { (useSchema, useSeed, plain) ->
-                val r = call(useSchema, useSeed, plain)
-                r.getOrNull()?.let { return it }
-                val e = r.exceptionOrNull()
-                // 限流直接抛出，交给外层退避重试，不做无意义的参数降级
-                if (isRateLimit(e)) throw e ?: IOException("rate limit")
-                val retryable = (e is HttpError && isRetryable4xx(e.code)) || isParamReject(e)
-                if (!retryable) throw e ?: IOException(t("LLM 请求失败", "LLM request failed"))
-                lastError = e
+            // O-06 快速模式：Custom 网关先带 reasoning_effort=none 跑阶梯；
+            // 整条阶梯都因参数被拒（可重试 4xx）时，去掉该字段再跑一次。
+            val sendEffortNone = !anthropic && provider == LlmProvider.Custom && reasoningEffort == "none"
+            if (!sendEffortNone) return ladder(false)
+            return try {
+                ladder(true)
+            } catch (e: Throwable) {
+                val paramRejected = e is HttpError && !isRateLimit(e) &&
+                    (isRetryable4xx(e.code) || isParamReject(e))
+                if (paramRejected) ladder(false) else throw e
             }
-            throw lastError ?: IOException(t("LLM 请求失败", "LLM request failed"))
         }
 
         // A3：限流退避重试 1 次（多候选 3 路并发可能触发 Kimi rate_limit_reached_error）
         val t0 = System.currentTimeMillis()
         var perfRetried = false
-        val first = runCatching { doRequest() }
-        val outcome = if (first.isFailure && isRateLimit(first.exceptionOrNull())) {
+        var gatewayRetried = false
+        val first = runCatching { doRequest(endpoint) }
+        var outcome = if (first.isFailure && isRateLimit(first.exceptionOrNull())) {
             perfRetried = true
             delay(1500)
-            runCatching { doRequest() }
+            runCatching { doRequest(endpoint) }
         } else {
             first
+        }
+        // 5xx 网关抖动：原端点退避重试 1 次；Claude 模型再回退到中转站的
+        // Anthropic 原生 /messages 端点（OpenAI→Claude 转换线路故障时原生线路常还能通）。
+        if (outcome.isFailure && isGateway5xx(outcome.exceptionOrNull())) {
+            gatewayRetried = true
+            delay(1500)
+            outcome = runCatching { doRequest(endpoint) }
+            val altUrl = if (endpoint.protocol == ApiProtocol.OPENAI &&
+                (modelName.contains("claude") || modelName.contains("anthropic"))
+            ) anthropicFallbackUrl(endpoint.url) else null
+            if (altUrl != null && outcome.isFailure && isGateway5xx(outcome.exceptionOrNull())) {
+                val alt = runCatching { doRequest(Endpoint(altUrl, ApiProtocol.ANTHROPIC)) }
+                // 回退端点仍失败时上报原始 5xx（比回退端点的 404 更贴近真实故障）
+                if (alt.isSuccess) outcome = alt
+            }
         }
         val ms = System.currentTimeMillis() - t0
         Log.i(
             "PocketSimPerf",
             "model=$model effort=$reasoningEffort highspeed=$preferHighSpeed provider=$provider " +
-                "ms=$ms retried=$perfRetried ok=${outcome.isSuccess}"
+                "ms=$ms retried=${perfRetried || gatewayRetried} ok=${outcome.isSuccess}"
         )
         // P-05 usage 采集：成功带 usage，失败也记一条 ok=false（token 未知、时延已知）。
         // 仅调试包接线非空 sink；观测层任何异常一律吞掉，绝不影响建模主流程。
@@ -764,10 +830,11 @@ class LlmClientImpl(
                     model = effectiveModel(messages),
                     provider = provider.name,
                     effort = reasoningEffort,
-                    stream = useStream,
+                    stream = endpoint.protocol == ApiProtocol.OPENAI &&
+                        (provider == LlmProvider.Kimi || modelName.contains("kimi")),
                     ms = ms,
                     ok = outcome.isSuccess,
-                    retried = perfRetried,
+                    retried = perfRetried || gatewayRetried,
                     usage = outcome.getOrNull()?.usage
                 )
             )
