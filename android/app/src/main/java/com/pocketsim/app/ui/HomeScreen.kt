@@ -114,7 +114,9 @@ fun HomeScreen(
     var beforePolish by remember { mutableStateOf<String?>(null) }
     // 通用结构下分自动 / 强制三维：自动由 AI 判别平面还是空间（P3D-5），
     // 强制三维则输出 dim=3 空间框架（P3D-3）
-    var threeDim by remember { mutableStateOf(false) }
+    // v1.2.45：默认选中「三维结构」——用户反馈 3D 建模质量更好，
+    // 即使多花时间和 token 也值得；「杆系·自动」仍可手动切回
+    var threeDim by remember { mutableStateOf(true) }
     // 三维模式下再分：空间梁元（frame dim=3）/ 三维实体 TET4（solid_wall）
     var forceSolid by remember { mutableStateOf(false) }
     // 三维实体下再分：墙体专用（solid_wall）/ 通用三维实体（solid_generic）

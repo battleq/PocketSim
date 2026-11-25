@@ -494,7 +494,10 @@ class LlmClientImpl(
             // 请求服务端关闭或压低深度思考；不识别该字段的网关由 doRequest 去字段重试兜底。
             // Anthropic 协议请求体本就不带 thinking 参数（默认即关闭），无需处理。
             if (includeReasoningNone && provider == LlmProvider.Custom) {
-                put("reasoning_effort", "none")
+                // qwen 系列实测（v1.2.44 真机横评）接受 none 但输出 230 token 废稿
+                // （空补丁、无有效方案），与 Kimi 同病——none 档下限抬到 low。
+                val noneFloor = if (effModel.lowercase().contains("qwen")) "low" else "none"
+                put("reasoning_effort", noneFloor)
             }
         }
     }

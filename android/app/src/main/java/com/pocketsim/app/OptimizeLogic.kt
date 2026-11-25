@@ -14,12 +14,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -38,7 +42,12 @@ data class OptimizeSuggestion(
     val expected: String = "",
     val changes: List<String> = emptyList(),
     /** 完整优化模型 JSON；null 表示 AI 未给出可解析模型 */
-    val modelJson: String? = null
+    val modelJson: String? = null,
+    /**
+     * O-07 增量补丁 JSON 原文（输出契约 patch 字段）。
+     * 解析链路会把它应用到原模型上合成完整模型并填入 [modelJson]，成功后置回 null。
+     */
+    val patchJson: String? = null
 )
 
 /** AI 优化建议回复 */
@@ -48,6 +57,124 @@ data class OptimizeReply(
     val suggestions: List<OptimizeSuggestion> = emptyList(),
     val disclaimer: String = ""
 )
+
+// ---------------------------------------------------------------------
+// O-07：增量补丁输出契约——每方案只写改动，客户端在原 FrameModel 上
+// 确定性合成完整新模型。v1 只允许新增与修改、禁止 delete；
+// 载荷不进 patch（载荷零改动由"无载荷字段"+ O-03 loadSignature 双重保证）。
+// 全部字段带默认值；序列化走 LeanPromptJson 风格（encodeDefaults=false，省略默认值）。
+// ---------------------------------------------------------------------
+
+/** 单个方案的增量补丁（对应输出契约的 patch 字段） */
+@Serializable
+data class OptimizePatch(
+    /** 新增节点：id 必须大于原模型最大节点号且不与现有/其他新增冲突 */
+    val add_nodes: List<FrameNode> = emptyList(),
+    /** 新增杆件：id 必须大于原模型最大杆件号；i/j 必须指向合成后存在的节点 */
+    val add_members: List<FrameMember> = emptyList(),
+    /** 新增支座：挂载节点必须存在；原有支座只增不松、不改动 */
+    val add_supports: List<FrameSupport> = emptyList(),
+    /** 修改已有杆件：id 必须在原模型中存在；未列出的字段保持不变 */
+    val modify_members: List<FrameMemberPatch> = emptyList()
+)
+
+/**
+ * modify_members 元素：只写 id 与真正要改的字段，null 表示该字段不变。
+ * i/j 允许改指（无 delete 约束下"把原杆件一端改到新节点"即表达"拆分"）；
+ * 载荷相关字段不在其中，一律不可改。
+ */
+@Serializable
+data class FrameMemberPatch(
+    val id: Int = 0,
+    val i: Int? = null,
+    val j: Int? = null,
+    val width_b: Double? = null,
+    val depth_h: Double? = null,
+    val wall_t: Double? = null,
+    val material: String? = null,
+    val shape: String? = null,
+    val outer_diameter_mm: Double? = null
+)
+
+/**
+ * O-07：在原模型上应用增量补丁，确定性合成完整新模型。
+ * 校验任一失败抛 [AiParseException]（中文原因）：
+ * ①新增 id 必须大于原模型对应最大编号且不与现有/其他新增冲突；
+ * ②modify 引用 id 必须存在、不重复；
+ * ③引用完整性：新杆件端点节点、修改后的端点节点、新支座挂载节点必须存在；
+ * ④载荷原样透传（patch 无载荷字段，构造性零改动）。
+ */
+internal object OptimizePatchApplier {
+
+    fun apply(base: FrameModel, patch: OptimizePatch): FrameModel {
+        val nodeIds = base.nodes.mapTo(mutableSetOf()) { it.id }
+        val memberIds = base.members.mapTo(mutableSetOf()) { it.id }
+        val maxNodeId = nodeIds.maxOrNull() ?: 0
+        val maxMemberId = memberIds.maxOrNull() ?: 0
+
+        // ① 新增节点
+        patch.add_nodes.forEach { n ->
+            if (n.id <= maxNodeId)
+                throw AiParseException("[O-07] 新增节点 id=${n.id} 必须大于原模型最大节点号 $maxNodeId")
+            if (!nodeIds.add(n.id))
+                throw AiParseException("[O-07] 新增节点 id=${n.id} 与原模型或补丁内其他节点冲突")
+        }
+
+        // ② 修改已有杆件：id 必须存在且不重复
+        val modifyById = mutableMapOf<Int, FrameMemberPatch>()
+        patch.modify_members.forEach { mod ->
+            if (mod.id !in memberIds)
+                throw AiParseException(
+                    "[O-07] modify_members 引用的杆件 id=${mod.id} 在原模型中不存在" +
+                        "（现有杆件号：${memberIds.sorted().joinToString(", ")}）"
+                )
+            if (modifyById.put(mod.id, mod) != null)
+                throw AiParseException("[O-07] modify_members 中杆件 id=${mod.id} 重复")
+        }
+
+        // ③ 新增杆件：id 规则 + 端点引用完整性
+        val newMembers = patch.add_members.onEach { m ->
+            if (m.id <= maxMemberId)
+                throw AiParseException("[O-07] 新增杆件 id=${m.id} 必须大于原模型最大杆件号 $maxMemberId")
+            if (!memberIds.add(m.id))
+                throw AiParseException("[O-07] 新增杆件 id=${m.id} 与原模型或补丁内其他杆件冲突")
+            if (m.i !in nodeIds || m.j !in nodeIds)
+                throw AiParseException("[O-07] 新增杆件 #${m.id} 的端点节点 ${m.i}→${m.j} 不存在（须先存在于原模型或 add_nodes）")
+        }
+
+        // ④ 新增支座：挂载节点必须存在（原有 supports 不动，只增不松）
+        patch.add_supports.forEach { s ->
+            if (s.node !in nodeIds)
+                throw AiParseException("[O-07] 新增支座挂载的节点 ${s.node} 不存在")
+        }
+
+        val mergedMembers = base.members.map { mb ->
+            val mod = modifyById[mb.id] ?: return@map mb
+            mb.copy(
+                i = mod.i ?: mb.i,
+                j = mod.j ?: mb.j,
+                width_b = mod.width_b ?: mb.width_b,
+                depth_h = mod.depth_h ?: mb.depth_h,
+                wall_t = mod.wall_t ?: mb.wall_t,
+                material = mod.material ?: mb.material,
+                shape = mod.shape ?: mb.shape,
+                outer_diameter_mm = mod.outer_diameter_mm ?: mb.outer_diameter_mm
+            )
+        }
+        // 修改后的端点同样校验引用完整性
+        mergedMembers.forEach { m ->
+            if (m.i !in nodeIds || m.j !in nodeIds)
+                throw AiParseException("[O-07] 杆件 #${m.id} 修改后的端点节点 ${m.i}→${m.j} 不存在")
+        }
+
+        return base.copy(
+            nodes = base.nodes + patch.add_nodes,
+            members = mergedMembers + newMembers,
+            supports = base.supports + patch.add_supports
+            // loads 原样透传：patch 不含载荷字段，构造性保证载荷零改动（O-07）
+        )
+    }
+}
 
 /** 差异类型 */
 enum class ChangeKind { ADDED, MODIFIED, REMOVED }
@@ -678,6 +805,15 @@ class OptimizeSession(
                 append(profile)
             }
         }
+        if (target.kind == OptimizeKind.SOLID_GENERIC) {
+            // O-07：增量补丁契约只适用于梁杆模型，三维实体通道显式改回完整模型输出
+            append(
+                if (english) "\n\n[Note] This is a 3D solid model: the incremental patch contract above does NOT " +
+                    "apply — put the COMPLETE new model in each option's model field instead."
+                else "\n\n【说明】本模型为三维实体：上述增量补丁（patch）契约不适用，" +
+                    "每个方案直接在 model 字段输出完整的新模型（写法与【当前模型】一致）。"
+            )
+        }
         append("\n\n【当前模型（JSON）】\n")
         append(leanModelJson(target.kind, target.modelJson))
         append("\n\n【本次分析结果摘要】\n")
@@ -745,11 +881,100 @@ class OptimizeSession(
     }
 
     private suspend fun requestOnce(client: AiClient, slot: Int?): OptimizeReply {
-        val raw = client.complete(
-            listOf(LlmMessage("system", systemPrompt), LlmMessage("user", userMessage(slot))),
-            jsonMode = true, tag = "optimize"
+        val messages = mutableListOf(
+            LlmMessage("system", systemPrompt),
+            LlmMessage("user", userMessage(slot))
         )
-        return AiParser.parseOptimize(raw, target.kind)
+        // O-07 埋点分组：FRAME 走 patch 优先契约（tag=optimize/patch），实体通道保持完整模型契约（tag=optimize）
+        val raw = client.complete(
+            messages, jsonMode = true,
+            tag = if (target.kind == OptimizeKind.FRAME) "optimize/patch" else "optimize"
+        )
+        if (target.kind != OptimizeKind.FRAME) return AiParser.parseOptimize(raw, target.kind)
+        try {
+            return parseOptimizeReply(raw)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (pe: Exception) {
+            // O-07：增量补丁解析/应用失败 → 本路自动重发一次"改输出完整模型"请求。
+            // 优化通道重试不升思考档（与 O-06 快速模式解耦，沿用当前客户端；
+            // 升 high 仅保留在建模通道 AiParser.parseFrameWithRetry）。
+            messages += LlmMessage(
+                "user",
+                t(
+                    "上一轮的增量补丁（patch）解析或应用失败：${pe.readableMessage()}。\n" +
+                        "请把该方案改为直接输出完整的新模型：suggestions 每个方案的 model 字段给完整模型 JSON" +
+                        "（写法与【当前模型】一致，省略默认字段的规则不变），不要再给 patch。",
+                    "The previous incremental patch failed to parse/apply: ${pe.readableMessage()}.\n" +
+                        "Output the COMPLETE new model instead: put the full model JSON in each option's model field " +
+                        "(same format as the current model, default-valued fields omitted as before), no patch."
+                )
+            )
+            val raw2 = client.complete(messages, jsonMode = true, tag = "optimize/full") // O-07 回退重发单独分组，便于统计回退率
+            // 仍失败 → 抛异常记本路失败（O-05 单路失败不阻塞其余路）
+            return AiParser.parseOptimize(raw2, target.kind)
+        }
+    }
+
+    /**
+     * O-07 解析：梁杆模型优先按增量补丁（patch）契约解析——带 patch 的方案在原模型上
+     * 合成完整新模型后走既有校验链路；patch 缺失或应用失败退回方案自带的完整模型（model 字段）。
+     * 全部方案不合法时抛 [AiParseException]（由调用方回退一次"改输出完整模型"请求）。
+     */
+    private fun parseOptimizeReply(raw: String): OptimizeReply {
+        val reply = OptimizeJson.parseStructure(raw)
+        if (reply.suggestions.isEmpty()) return reply
+        val base = try {
+            AppJson.decodeFromString(FrameModel.serializer(), target.modelJson)
+        } catch (e: Exception) {
+            throw AiParseException("原模型解析失败，无法应用增量补丁：${e.message?.take(120)}", e)
+        }
+        var firstFailure: String? = null
+        val validated = reply.suggestions.mapNotNull { s ->
+            // ① 优先增量补丁：合成完整模型后走既有建模校验链路
+            val pj = s.patchJson
+            if (pj != null) {
+                try {
+                    val patch = AppJson.decodeFromString(OptimizePatch.serializer(), pj)
+                    val fullModel = OptimizePatchApplier.apply(base, patch)
+                    // v1.2.45 真机横评：qwen 等模型在 none 档会返回"合法但全空"的补丁
+                    // （230 token 废稿），合成结果与原模型完全一致——按失败处理，
+                    // 触发整路回退"改输出完整模型"重发，而不是静默丢弃方案。
+                    if (fullModel == base) {
+                        throw AiParseException("增量补丁对原模型没有任何改动（空补丁），不是有效方案")
+                    }
+                    val full = AppJson.encodeToString(FrameModel.serializer(), fullModel)
+                    val normalized = AiParser.validateOptimizeModel(full, target.kind)
+                        ?: throw AiParseException("增量补丁合成后的完整模型未通过模型校验")
+                    return@mapNotNull s.copy(modelJson = normalized, patchJson = null)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (firstFailure == null) firstFailure = e.readableMessage()
+                    // 补丁应用失败 → 该方案退回尝试 AI 直接给出的完整模型
+                }
+            }
+            // ② 完整模型契约（回退路径 / 三维实体通道）
+            val mj = s.modelJson
+            if (mj != null) {
+                try {
+                    val normalized = AiParser.validateOptimizeModel(mj, target.kind) ?: return@mapNotNull null
+                    return@mapNotNull s.copy(modelJson = normalized)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    return@mapNotNull null
+                }
+            }
+            null
+        }
+        if (validated.isEmpty()) {
+            throw AiParseException(
+                firstFailure?.let { "AI 给出的增量补丁均未通过解析与应用：$it" }
+                    ?: "AI 给出的优化模型均未通过模型校验"
+            )
+        }
+        return reply.copy(suggestions = validated)
     }
 
     /**
@@ -760,23 +985,36 @@ class OptimizeSession(
         // 按槽位固定存放，展示顺序恒为方案编号顺序
         val slots = arrayOfNulls<Pair<OptimizeReply, List<VerifiedOptimization>>>(count)
         var firstError: Exception? = null
+        // Kimi highspeed 等中转 QPS 配额低：并发限 2 路；任一路命中限流后，
+        // 后续路启动前额外退避，避免整轮同时撞墙（实测 3 路并发失败率 62%）。
+        val permits = Semaphore(2)
+        val rateLimited = AtomicBoolean(false)
         coroutineScope {
             (1..count).map { slot ->
                 async {
-                    if (slot > 1) delay(300L * (slot - 1))
-                    try {
-                        val reply = requestOnce(client, slot)
-                        val verified = reply.suggestions.take(1).map { s -> verifyOne(s) }
-                        slots[slot - 1] = reply to verified
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        if (firstError == null) firstError = e
+                    permits.withPermit {
+                        if (slot > 1) delay(1200L * (slot - 1))
+                        if (rateLimited.get()) delay(3000L)
+                        try {
+                            val reply = requestOnce(client, slot)
+                            val verified = reply.suggestions.take(1).map { s -> verifyOne(s) }
+                            slots[slot - 1] = reply to verified
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // LlmClient 将 429/rate_limit 转为含 "HTTP 429" 的提示文案
+                            if (e.message?.contains("429") == true ||
+                                e.message?.contains("rate_limit", ignoreCase = true) == true
+                            ) {
+                                rateLimited.set(true)
+                            }
+                            if (firstError == null) firstError = e
+                        }
+                        // 并发写不同下标、读侧仅用于进度展示，偶发读到旧值无碍正确性
+                        _state.value = OptimizeState.Running(
+                            verified = slots.filterNotNull().flatMap { it.second }
+                        )
                     }
-                    // 并发写不同下标、读侧仅用于进度展示，偶发读到旧值无碍正确性
-                    _state.value = OptimizeState.Running(
-                        verified = slots.filterNotNull().flatMap { it.second }
-                    )
                 }
             }.awaitAll()
         }
@@ -865,11 +1103,34 @@ class OptimizeSession(
                   "desc": "具体怎么改，一句话说清",
                   "expected": "预期改善（不要编造精确数字，给方向即可）",
                   "changes": ["改了什么"],
-                  "model": { 完整的新模型，写法与【当前模型】一致 }
+                  "patch": { 增量补丁：只写改动的部分，写法见下方【增量补丁契约】 }
                 }
               ],
               "disclaimer": "AI 辅助建议，不能替代正规工程验算"
             }
+
+            【增量补丁契约（优先用 patch，省掉重复整个模型的输出 token）】
+            - patch 只有四组数组：add_nodes 新增节点、add_members 新增杆件、add_supports 新增支座、
+              modify_members 修改已有杆件；元素写法与【当前模型】对应字段一致，省略默认值字段的规则同下；
+            - modify_members 元素只写 id 加真正要改的字段：截面（width_b/depth_h/wall_t/outer_diameter_mm/shape）、
+              材料（material）、端点（i/j——"把原杆件拆短、后半跨另起新杆件"就是拆分）；没写的字段一律不变；
+              载荷不进 patch、一律不许改动；
+            - 【最小改动硬约束】patch 里只允许出现与本次改造直接相关的构件：未被改造触碰的
+              节点/杆件/支座一律不得写入（尤其禁止把全部杆件列进 modify_members"顺手复述"一遍）；
+              title/desc/expected 各不超过 60 字，changes 每条不超过 30 字，不复述模型数据；
+            - ID 规则（数值以【结构体系画像】里的最大编号为准）：add_nodes 的 id 必须全部大于最大节点号，
+              add_members 的 id 必须全部大于最大杆件号，且互不重复、不与现有编号冲突；
+              新杆件的 i/j、新支座的挂载节点必须指向合成后存在的节点；modify_members 的 id 必须在原模型中存在；
+            - 只允许新增与修改，不支持 delete：不能删除任何节点/杆件/支座；
+              方案若确需删除构件、或把 udl 改挂到拆分后的子杆件上（patch 表达不了改载荷），
+              该方案改为在 "model" 字段直接输出完整的新模型（model 与 patch 二选一；程序会自动校验，失败即退回要求完整模型）；
+            - 配方 A（简支→连续）的 patch 写法示例（原杆件 1 为 1→2、L=4000，最大节点号 2、最大杆件号 1，
+              危险跨中点 x=2000，竖向集中力作用在节点上、不受拆分影响）：
+              {"add_nodes":[{"id":3,"x":2000,"y":0}],"modify_members":[{"id":1,"j":3}],
+              "add_members":[{"id":2,"i":3,"j":2,"width_b":100,"depth_h":200,"material":"Q235钢"}],
+              "add_supports":[{"node":3,"type":"roller"}]}
+              即：跨中新增节点 3 并挂滚轴支座；原杆件 1 改短为 1→3（前半跨）；
+              新增杆件 2 从 3→2（后半跨），截面、材料同原杆件 1；原杆件上的集中力留在原节点不动。
 
             【第一步：先判断体系，再选手段】
             先读【结构体系画像】（程序按模型确定性计算），回答三个问题：
@@ -912,16 +1173,18 @@ class OptimizeSession(
 
             【第四步：改模型规则（改的时候直接遵守即可，不要回头逐条自查、不要反复验算）】
             - 新增的每个节点至少连接 2 根杆件，或连接 1 根杆件且有支座；不留孤立节点；
-            - 拆分后的子杆件首尾相接、共线，并删除被拆的原杆件；
+            - 拆分后的子杆件首尾相接、共线；patch 不能删除原杆件——把原杆件一端改指到新节点即为拆分；
             - 原有 supports 条目一律原样保留（节点号、type、fix 不变），只能新增；
             - force 的作用节点与数值不变；原 udl 覆盖的每一段都改挂到对应子杆件上，q 值不变；
             - members 的 i/j 必须指向存在的节点；2D 模型的新节点 z 省略或为 0；
             - changes 数组逐条写清改动（新增节点 / 拆分 / 新增支座 / 新增杆件）。
 
             硬性约束（违反则方案无效）：
-            1. 每个方案必须给出【完整新模型】（不是增量补丁），保留 name、dim 与全部节点/杆件/支座/载荷；
+            1. 每个方案优先给出【增量补丁 patch】（只写改动，不重复未改动的节点/杆件/支座/载荷），
+               合成后 name、dim 与全部未改动内容与【当前模型】一致；
                【当前模型】已省略取默认值的字段（坐标/分量为 0、空数组、载荷 type=force、支座 type=pinned、截面 shape=rect），
-               你也照此省略，不要补写；整个回复输出为紧凑 JSON（不缩进、不换行），文字字段简洁；
+               patch 元素也照此省略、不要补写；仅当方案确需删除构件或改动载荷时才在 "model" 字段给【完整新模型】；
+               整个回复输出为紧凑 JSON（不缩进、不换行），文字字段简洁；
             2. 【严禁】减少载荷、改动载荷数值或位置、放松或删除原有约束——程序会自动比对，作弊方案直接作废；
             3. 材料只能从材料库中选各向同性的常用材料（钢、铝合金、混凝土等），优先沿用原材料；
                不要把原材料替换为木材、复合材料；
@@ -942,10 +1205,37 @@ class OptimizeSession(
               "ready": true,
               "diagnosis": "root cause: which member/location, which failure mode",
               "suggestions": [
-                {"title": "...", "desc": "...", "expected": "...", "changes": ["..."], "model": { full model }}
+                {"title": "...", "desc": "...", "expected": "...", "changes": ["..."], "patch": { incremental patch — only what changed, see PATCH CONTRACT below }}
               ],
               "disclaimer": "AI-assisted advice; not a substitute for formal engineering verification"
             }
+
+            PATCH CONTRACT (prefer patch over re-emitting the whole model — saves output tokens):
+            - A patch has exactly four arrays: add_nodes, add_members, add_supports, modify_members;
+              elements are written like the matching fields of the current model, omitting default-valued fields;
+            - modify_members entries carry id plus ONLY the fields actually changed: section
+              (width_b/depth_h/wall_t/outer_diameter_mm/shape), material, endpoints (i/j — "shorten the original
+              member and start the second half as a new member" IS the split); unlisted fields stay unchanged;
+              loads are never part of a patch and never change;
+            - [MINIMAL-CHANGE HARD RULE] a patch may ONLY contain members/nodes/supports directly involved in
+              this option's modification — never restate untouched members (listing all members in modify_members is
+              forbidden); keep title/desc/expected under 60 words each and each changes entry under 30 words,
+              without restating model data;
+            - ID rules (values come from the [Structural profile]): every id in add_nodes must be greater than the
+              max node id; every id in add_members greater than the max member id; no duplicates and no clashes
+              with existing ids; endpoints of new members and nodes of new supports must exist after merging;
+              ids in modify_members must exist in the original model;
+            - additions and modifications only, NO delete: never remove nodes/members/supports; if an option really
+              needs deleting a member or re-attaching a udl onto the split sub-members (a patch cannot express load
+              changes), put the COMPLETE new model in the "model" field instead (model XOR patch; the app validates
+              and automatically re-requests the full model on failure);
+            - Recipe A patch example (original member #1 is 1→2, L=4000, max node id 2, max member id 1, mid-span
+              at x=2000; nodal forces are unaffected by the split):
+              {"add_nodes":[{"id":3,"x":2000,"y":0}],"modify_members":[{"id":1,"j":3}],
+              "add_members":[{"id":2,"i":3,"j":2,"width_b":100,"depth_h":200,"material":"Q235 steel"}],
+              "add_supports":[{"node":3,"type":"roller"}]}
+              i.e. add mid node 3 with a roller support; shorten member 1 to 1→3 (first half); add member 2 from
+              3→2 (second half) with the same section and material as member 1; keep every force at its node.
 
             STEP 1 - identify the structural system first, then pick measures.
             Read the [Structural profile] (computed deterministically from the model) and answer:
@@ -989,7 +1279,8 @@ class OptimizeSession(
             STEP 4 - model edit rules (follow them while editing; do NOT pause to re-check item by item
             or re-verify numbers — the app validates and re-solves the model automatically):
             - every new node connects to >= 2 members, or 1 member plus a support; no orphan nodes;
-            - split sub-members are collinear and chained; the original member is removed (no overlap);
+            - split sub-members are collinear and chained; a patch cannot delete the original member —
+              re-pointing one of its ends to the new node IS the split;
             - every original supports entry is kept verbatim (node, type, fix); you may only add;
             - every force keeps node coordinates and values; every original udl length is fully covered
               by sub-member udl entries with the same q;
@@ -998,9 +1289,12 @@ class OptimizeSession(
               "add support at node #n", "add member #m".
 
             Hard constraints (violating them invalidates the option):
-            1. Each option MUST provide the COMPLETE new model (not a patch), keeping name, dim and all nodes/members/supports/loads;
-               the current model omits default-valued fields (zero coordinates/components, empty arrays, load type=force,
-               support type=pinned, shape=rect) - omit them too; output the whole reply as compact JSON (no indentation or line breaks), concise text;
+            1. Each option should provide the incremental PATCH (only what changed — do not repeat unchanged
+               nodes/members/supports/loads); after merging, name, dim and everything untouched stay identical.
+               The current model omits default-valued fields (zero coordinates/components, empty arrays, load type=force,
+               support type=pinned, section shape=rect) — patch elements omit them too; only when an option really
+               needs deleting a member or changing loads put the COMPLETE new model in the "model" field;
+               whole reply as compact JSON (no indentation or line breaks), concise text;
             2. NEVER reduce loads, change load values/positions, or relax/remove existing constraints —
                the app checks this automatically and discards cheating options;
             3. Materials must be isotropic and from the built-in library (steel, aluminum, concrete);
@@ -1036,6 +1330,7 @@ internal object OptimizeJson {
         val suggestions = arr.mapNotNull { el ->
             val o = el as? JsonObject ?: return@mapNotNull null
             val modelObj = o["model"] as? JsonObject
+            val patchObj = o["patch"] as? JsonObject
             OptimizeSuggestion(
                 title = o.str("title"),
                 desc = o.str("desc"),
@@ -1043,7 +1338,9 @@ internal object OptimizeJson {
                 changes = (o["changes"] as? JsonArray)
                     ?.mapNotNull { (it as? JsonPrimitive)?.content?.takeIf { s -> s.isNotBlank() } }
                     ?: emptyList(),
-                modelJson = modelObj?.let { AppJson.encodeToString(JsonObject.serializer(), it) }
+                modelJson = modelObj?.let { AppJson.encodeToString(JsonObject.serializer(), it) },
+                // O-07：增量补丁原文（LeanPromptJson 风格序列化，省略默认值字段）
+                patchJson = patchObj?.let { LeanPromptJson.encodeToString(JsonObject.serializer(), it) }
             )
         }
         return OptimizeReply(ready, diagnosis, suggestions, disclaimer)

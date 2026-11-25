@@ -35,6 +35,8 @@ keystore.properties
 
 # 测试与缓存
 .pytest_cache/
+llm_stats.jsonl
+_measure/
 
 # 本地便携 Gradle 发行版（构建用，不入库）
 gradle-8.14/

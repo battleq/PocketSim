@@ -264,6 +264,143 @@ class OptimizeTest {
     }
 
     // ------------------------------------------------------------------
+    // O-07：增量补丁契约（patch 解析 / Applier 合成 / ID 校验 / 完整模型回退）
+    // ------------------------------------------------------------------
+
+    /** 构造 O-07 增量补丁契约的优化回复 JSON（suggestions 只带 patch 字段） */
+    private fun patchReplyJson(patch: String, title: String = "新增中间支座"): String =
+        """{"ready":true,"diagnosis":"支座处弯矩过大","suggestions":[{"title":"$title","desc":"跨中加节点与铰支座改连续梁","expected":"弯矩下降","changes":["新增节点","新增支座"],"patch":$patch}],"disclaimer":"AI 辅助建议，不能替代正规工程验算"}"""
+
+    @Test
+    fun `O-07 patch 应用合成结果与期望完整模型一致`() {
+        val patch = AppJson.decodeFromString(
+            OptimizePatch.serializer(),
+            """{"add_nodes":[{"id":3,"x":2000,"y":0}],
+               "modify_members":[{"id":1,"j":3}],
+               "add_members":[{"id":2,"i":3,"j":2,"width_b":100,"depth_h":200,"material":"Q235钢"}],
+               "add_supports":[{"node":3,"type":"roller"}]}"""
+        )
+        val merged = OptimizePatchApplier.apply(frame(beamModel), patch)
+        // 合成结果 = 连续梁（name 与载荷不进 patch，原样透传 → 保持基准模型不变）
+        assertEquals(
+            frame(continuousModel).copy(name = frame(beamModel).name, loads = frame(beamModel).loads),
+            merged
+        )
+        // LeanPromptJson 风格：空 patch 序列化省略全部默认值字段（P-07）
+        assertEquals("{}", LeanPromptJson.encodeToString(OptimizePatch.serializer(), OptimizePatch()))
+    }
+
+    @Test
+    fun `O-07 patch ID 冲突与引用不存在时应用失败并给出中文原因`() {
+        val base = frame(beamModel)
+        fun apply(patchJson: String) = runCatching {
+            OptimizePatchApplier.apply(base, AppJson.decodeFromString(OptimizePatch.serializer(), patchJson))
+        }
+        // 新增节点 id 不大于原模型最大节点号（与现有编号冲突必然 ≤ 最大号，先触发该检查）
+        val c1 = apply("""{"add_nodes":[{"id":2,"x":2000,"y":0}]}""")
+        assertTrue(c1.exceptionOrNull() is AiParseException)
+        assertTrue(c1.exceptionOrNull()!!.message!!.contains("大于"))
+        // 补丁内新增节点 id 互相重复 → 冲突
+        val c2 = apply("""{"add_nodes":[{"id":3,"x":1000,"y":0},{"id":3,"x":2000,"y":0}]}""")
+        assertTrue(c2.exceptionOrNull()!!.message!!.contains("冲突"))
+        // modify 引用不存在的杆件 id
+        val c3 = apply("""{"modify_members":[{"id":99,"width_b":120}]}""")
+        assertTrue(c3.exceptionOrNull()!!.message!!.contains("不存在"))
+        // 新增杆件端点节点不存在
+        val c4 = apply("""{"add_members":[{"id":5,"i":9,"j":2,"width_b":100,"depth_h":200,"material":"Q235钢"}]}""")
+        assertTrue(c4.exceptionOrNull()!!.message!!.contains("端点节点"))
+        // 新增支座挂载节点不存在
+        val c5 = apply("""{"add_supports":[{"node":99,"type":"roller"}]}""")
+        assertTrue(c5.exceptionOrNull()!!.message!!.contains("不存在"))
+    }
+
+    @Test
+    fun `O-07 patch 回复合成完整模型后单请求通过`() = runTest {
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
+            summary = "危险",
+            before = OptimizeMetrics(safetyFactor = 1.0)
+        )
+        // 合法 patch（加斜撑 5→1 + 加大 1 号杆截面，等价于 optimizedModel）→ 一次请求即合成校验通过
+        val goodPatch =
+            """{"modify_members":[{"id":1,"width_b":40,"depth_h":50}],"add_members":[{"id":5,"i":5,"j":1,"width_b":30,"depth_h":40,"material":"松木"}]}"""
+        val fake = FakeAiClient(listOf(patchReplyJson(goodPatch)))
+        val session = OptimizeSession(
+            aiClientProvider = { fake },
+            target = target,
+            suggestionCount = 1,
+            fastMode = false,
+            verifier = {
+                VerificationResult(ok = true, afterModelJson = it.modelJson!!, afterMetrics = OptimizeMetrics(safetyFactor = 2.4))
+            }
+        )
+        session.run()
+        val done = session.state.value as OptimizeState.Done
+        assertEquals(1, fake.calls.size)
+        assertTrue(done.verified[0].verified)
+        assertTrue(done.verified[0].diff.addedMemberIds.contains(5))
+        assertTrue(done.verified[0].diff.modifiedMemberIds.contains(1))
+    }
+
+    @Test
+    fun `O-07 patch 应用失败自动回退完整模型请求`() = runTest {
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
+            summary = "危险",
+            before = OptimizeMetrics(safetyFactor = 1.0)
+        )
+        // 第一次回复：patch 引用不存在的杆件 → 应用失败；第二次回复：完整模型 → 成功
+        val badPatch = """{"modify_members":[{"id":99,"width_b":120}]}"""
+        val fake = FakeAiClient(listOf(patchReplyJson(badPatch), replyJson(optimizedModel)))
+        val session = OptimizeSession(
+            aiClientProvider = { fake },
+            target = target,
+            suggestionCount = 1,
+            fastMode = false,
+            verifier = {
+                VerificationResult(ok = true, afterModelJson = it.modelJson!!, afterMetrics = OptimizeMetrics(safetyFactor = 2.4))
+            }
+        )
+        session.run()
+        val done = session.state.value as OptimizeState.Done
+        assertEquals(2, fake.calls.size)
+        // 第二次请求须带"改输出完整模型"的回退指令（不升思考档：沿用同一客户端）
+        assertTrue(fake.calls[1].last().content.contains("完整"))
+        assertTrue(done.verified[0].verified)
+        assertTrue(done.verified[0].diff.addedMemberIds.contains(5))
+    }
+
+    @Test
+    fun `O-07 空补丁与原模型全等时按失败回退完整模型请求`() = runTest {
+        val target = OptimizeTarget(
+            kind = OptimizeKind.FRAME,
+            modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
+            summary = "危险",
+            before = OptimizeMetrics(safetyFactor = 1.0)
+        )
+        // v1.2.45 实测：qwen 在 none 档返回合法但全空的补丁 → 合成结果与原模型一致，
+        // 必须按失败处理并回退"改输出完整模型"重发，而不是静默丢弃方案
+        val emptyPatch = """{"add_nodes":[],"add_members":[],"add_supports":[],"modify_members":[]}"""
+        val fake = FakeAiClient(listOf(patchReplyJson(emptyPatch), replyJson(optimizedModel)))
+        val session = OptimizeSession(
+            aiClientProvider = { fake },
+            target = target,
+            suggestionCount = 1,
+            fastMode = false,
+            verifier = {
+                VerificationResult(ok = true, afterModelJson = it.modelJson!!, afterMetrics = OptimizeMetrics(safetyFactor = 2.4))
+            }
+        )
+        session.run()
+        val done = session.state.value as OptimizeState.Done
+        assertEquals(2, fake.calls.size)
+        assertTrue(fake.calls[1].last().content.contains("完整"))
+        assertTrue(done.verified[0].verified)
+    }
+
+    // ------------------------------------------------------------------
     // 会话闭环：AI → 校验 → 有限元验证 → 差异
     // ------------------------------------------------------------------
     @Test
@@ -319,7 +456,7 @@ class OptimizeTest {
     @Test
     fun `OptimizeSession AI回复不可解析时进入失败态`() = runTest {
         val session = OptimizeSession(
-            aiClientProvider = { FakeAiClient(listOf("抱歉我无法给出结构化结果")) },
+            aiClientProvider = { FakeAiClient(listOf("抱歉我无法给出结构化结果", "抱歉，仍无法给出结构化结果")) },
             target = OptimizeTarget(
                 kind = OptimizeKind.FRAME,
                 modelJson = AppJson.encodeToString(FrameModel.serializer(), frame(baseModel)),
@@ -437,7 +574,7 @@ class OptimizeTest {
             summary = "危险",
             before = OptimizeMetrics(safetyFactor = 1.0)
         )
-        // 方案 1 的求解验证慢（1s）、方案 2 快：方案 2 应先进入 Running，Done 仍按 1→2 排序
+        // 方案 1 的求解验证慢（3s，大于 1.2s 错峰间隔）、方案 2 快：方案 2 应先进入 Running，Done 仍按 1→2 排序
         val fake = FakeAiClient(
             listOf(
                 replyJson(optimizedModel).replace("新增斜撑0", "慢方案"),
@@ -450,7 +587,7 @@ class OptimizeTest {
             suggestionCount = 2,
             fastMode = false,
             verifier = { s ->
-                if (s.title == "慢方案") delay(1000)
+                if (s.title == "慢方案") delay(3000)
                 VerificationResult(ok = true, afterModelJson = s.modelJson!!, afterMetrics = OptimizeMetrics(safetyFactor = 2.2))
             }
         )

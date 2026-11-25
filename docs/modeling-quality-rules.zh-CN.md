@@ -1,6 +1,6 @@
 # PocketSim 建模质量规则（Modeling Quality Rules）
 
-> 版本：v4（2026-11-20，随「优化方案体系级改造」轮更新，新增 O 类与 §四·六）｜上一版：v3（2026-11-19，新增 P 类与 §7）｜适用范围：AI 建模全链路（ChatSession、
+> 版本：v6（2026-11-25，O-07 已实施并经真机 llm_stats 验证；O-05 限流加固；O-06 增补 qwen 下限；建模默认改三维优先；O-08 设计中）｜上一版：v5（2026-11-23，O-07 代码完成）｜适用范围：AI 建模全链路（ChatSession、
 > FrameFollowUpSession、模板流 ParamForm/run_scenario）与全部求解入口（frame/frame3d/flow/
 > seepage/transient/solid/solid_generic/shell_vessel/shell_buried_pipe）。
 > 本文是规则的唯一现行版本；历史 .doc 仅存档，不再维护。
@@ -113,6 +113,7 @@
 | P-05 | M | 成本可观测性：每次 LLM 调用记录 usage（prompt/completion/reasoning/cached tokens + 时延），调试包写 `{dataDir}/llm_stats.jsonl`（开关同 caseLogEnabled，正式包零开销） | 任何提示词/候选/重试策略改动必须附改动前后调用级对比数据；离线估算（±30%）只作初步参考，以真机 usage 为准。状态：**采集层已实施**（2026-11-19）——`LlmClient.kt` 解析 OpenAI/Anthropic 两口径 usage（Kimi 官方域名流式自动带 `stream_options.include_usage`），`AppContainer.kt` 仅调试包落盘；调用带 `tag`（frame_model/followup/template_parse/material_lookup/optimize/polish）区分通道；失败调用也记 ok=false（时延已知、token 未知）。待真机采集数据替换 §7 假设档位 |
 | P-06 | S | 历史瘦身：当前 assistant 完整模型 JSON 写入 LLM history，后续每次调用重复付费 | 目标：历史只存结果摘要（kind+关键字段），完整模型存会话状态；实施前需埋点验证多轮一次通过率不劣化。状态：未实施 |
 | P-07 | M | 注入提示词的当前模型 JSON（修改模型强锚定块 / 追问上下文 / 优化通道）含大量默认值字段（坐标/分量 0、空数组、type=force、type=pinned、shape=rect），AI 照抄输出时同样浪费 token | 注入一律用 `LeanPromptJson`（`Models.kt`：PromptJson 基础上再 `encodeDefaults=false`），并在锚定/上下文文案中声明"省略字段按默认值理解、输出照此省略"；解析端由数据类默认值补回，语义不变（`OptimizeTest` 有往返等值用例）。求解契约不受影响：bridge 仍用 AppJson 全字段。状态：**已实施（2026-11-20，v1.2.41）**，真机前后对比待 llm_stats（P-05）验证 |
+| P-08 | M | 真机横评（v1.2.44，7 模型）发现自动判别提示词"能平面表达就用 2D"的偏置导致多数模型给平面杆系，用户判定 3D 建模质量更好、宁可多花时间与 token | 建模默认改**三维优先**：①首页结构模式默认选中「三维结构」chip（`HomeScreen` `threeDim=true`）；②「杆系·自动」的 `DIM_RULES_AUTO`/`EXAMPLE_AUTO` 翻转为默认 dim=3、仅用户明确说"平面/二维/2D"时才 2D，示例顺序 3D 在前。求解/校验链路本就双维支持，无契约变更。状态：**已实施（2026-11-24，v1.2.45）** |
 
 ## 四·六、O 类：优化策略（v4 新增）
 
@@ -124,8 +125,12 @@
 | O-02 | M | 诊断为弯曲/挠度/屈曲主导（大跨受弯构件等），或要求多方案（≥2 个） | 先评估体系级改造菜单：①简支→连续（增设中间支座或延伸多跨，削减跨中正弯矩）；②梁→桁架/拱（弯曲转为轴力拉压，发挥材料轴向承载力）；③增设中柱/支撑缩短计算跨度；④改变传力路径（增设斜撑/拉杆把荷载引向更刚的路径）。判据：多方案时至少一个为体系级改造；该结构确实无法体系级改造时退化为"至少一个方案只改结构形式、不换材料"。Evidence：desc 说明受力机制的改变及其为何更高效 |
 | O-03 | M | 体系级改造方案进入有限元重算验证 | 必须通过 `OptimizeDiff` 防作弊校验：新增中间支撑/杆件合法（`supportRelaxed` 只拦"减少原有约束"）；杆件拆分（梁→桁架）按几何匹配+共线子段识别为"修改"而非整段新增；载荷签名（`loadSignature`）不得变化——签名按**几何**（节点坐标、均布 q 值及 Σq·L 合力）计算而非 id，拆分杆件后 udl 必须改挂到全部子段且 q 不变，漏挂判作弊。判据：`loadOrSupportChanged=false` 且重算可解。Evidence：校验失败原因在 HUD 明示；减载/松约束一律判作弊 |
 | O-04 | M | 优化提示词须带结构体系画像与具体配方 | 梁杆模型由 `FrameProfile.describe` 确定性生成【结构体系画像】（杆件长度/朝向/端部支承/载荷、最低标高、最大节点/杆件号、简支跨/悬臂/悬空跨判断）注入提示词；提示词给出可照做的 JSON 配方（A 简支→连续梁、B 改桁架、C 悬臂加斜撑/拉杆、D 支撑/柱中拉结）和输出前自查清单；用户消息强制方案 1 为体系级。判据：抽检 AI 回复方案 1 为体系级且能通过 O-03。Evidence：`OptimizeTest` 中 FrameProfile 用例 |
-| O-05 | M | 多方案（≥2）在一次请求内串行输出多份完整模型，耗时线性叠加 | 方案数 >1 时改为**每方案一路请求并发生成**（`OptimizeSession.runPipelined`）：各路 user 消息注明本路方案号与手段定位（1 体系级/2 另一种体系级/3 构件级为主），错峰 300ms 起跑防限流，单路失败不影响其余，全部失败才报错；方案数=1 保持单请求。配合 P-07 精简注入 + 提示词"紧凑 JSON、省略默认字段"要求压缩输出。判据：多方案总耗时 ≈ 单方案耗时；`OptimizeTest` 并发合并用例 |
-| O-06 | M | 真机反馈优化通道端到端耗时仍过长（深度思考 + 串行求解验证） | 三管齐下：①**快速模式**（设置 `optimizeFastMode`，默认开）：优化通道单独 `withReasoningEffort("none")`——Custom 网关直发 `reasoning_effort=none` 且被 4xx 拒绝时自动去字段重跑降级阶梯，Kimi 落最低 low，方舟/DeepSeek 原生关闭，Anthropic 请求体本就不带 thinking；②**提示词去推理化**：第四步"输出前逐条自查"改为陈述式改模型规则，删除诱发反复验算的自检指令（质量由 O-03 确定性校验 + 有限元重算兜底）；③**验证流水线**：每路"请求→求解验证"独立并发，方案 1 的重算与方案 2/3 的网络等待重叠，完成的方案立即进入 `Running(verified=…)` 逐个呈现，Done 仍按方案编号排序。判据：优化端到端耗时明显下降且方案 1 体系级占比不降；`OptimizeTest` 快速模式切档 / 流水线呈现用例、`LlmClientTest` none 请求体用例 |
+| O-05 | M | 多方案（≥2）在一次请求内串行输出多份完整模型，耗时线性叠加 | 方案数 >1 时改为**每方案一路请求并发生成**（`OptimizeSession.runPipelined`）：各路 user 消息注明本路方案号与手段定位（1 体系级/2 另一种体系级/3 构件级为主），并发上限 2 路、错峰 1.2s 起跑、任一路命中 429 后额外指数退避（v1.2.45 限流加固，Kimi 路失败率实测 62%→0.8%），单路失败不影响其余，全部失败才报错；方案数=1 保持单请求。配合 P-07 精简注入 + 提示词"紧凑 JSON、省略默认字段"要求压缩输出。判据：多方案总耗时 ≈ 单方案耗时；`OptimizeTest` 并发合并用例 |
+| O-06 | M | 真机反馈优化通道端到端耗时仍过长（深度思考 + 串行求解验证） | 三管齐下：①**快速模式**（设置 `optimizeFastMode`，默认开）：优化通道单独 `withReasoningEffort("none")`——Custom 网关直发 `reasoning_effort=none` 且被 4xx 拒绝时自动去字段重跑降级阶梯，Kimi 落最低 low，**qwen 系列同病也落 low（v1.2.45：真机实测 qwen 接受 none 但输出 230 token 空补丁废稿）**，方舟/DeepSeek 原生关闭，Anthropic 请求体本就不带 thinking；②**提示词去推理化**：第四步"输出前逐条自查"改为陈述式改模型规则，删除诱发反复验算的自检指令（质量由 O-03 确定性校验 + 有限元重算兜底）；③**验证流水线**：每路"请求→求解验证"独立并发，方案 1 的重算与方案 2/3 的网络等待重叠，完成的方案立即进入 `Running(verified=…)` 逐个呈现，Done 仍按方案编号排序。判据：优化端到端耗时明显下降且方案 1 体系级占比不降；`OptimizeTest` 快速模式切档 / 流水线呈现用例、`LlmClientTest` none 请求体用例 |
+| O-07 | M | **【已实施（v1.2.43 代码 / v1.2.44–45 真机验证）】**优化通道每方案输出完整新模型 JSON：输出 token 随模型规模线性增长，是 O-06 之后剩余的耗时大头；轻量化模型维持全模型一致性（节点编号、引用关系）也最易出错 | **改增量补丁契约（C 方案）**。①每方案输出 `OptimizePatch`：`{desc, level, patch:{add_nodes[], add_members[], add_supports[], modify_members[]}}`，desc/level 语义不变；**v1 只允许新增与修改，禁止 delete**（防误删被引用节点，确需删除走完整模型回退）。②ID 规则：提示词注入 `maxNodeId/maxMemberId`（FrameProfile 已具备），新增 id 必须大于该值；modify 引用 id 必须存在于原模型，否则应用失败。③载荷零改动：patch 不含任何载荷字段，支座只增不松，合成后仍须过 O-03 `OptimizeDiff`（loadSignature 不变）+ STB-01 稳定性 + `verifyOne` 求解，验证链路与现行完全一致。④客户端新增 `OptimizePatchApplier`：在原 FrameModel 上合成完整模型，省略默认字段沿用 P-07。⑤**回退**：patch 解析/应用失败 → 本路自动重发一次"改输出完整 model"请求，仍失败记该路失败（O-05 单路失败不阻塞）；**优化通道任何重试不得升思考档**（与 O-06 快速模式解耦，替代现行 AiParser 重试升 high 的行为）。⑥轻量模型适配：提示词只给 patch schema + 一个配方示例，结构判断依据 FrameProfile 结论。判据：同模型同方案 patch 输出 token ≤ 完整模型 40%；方案 1 体系级占比与 O-03 通过率不低于完整模型基线。Evidence：`OptimizeTest` 新增 patch 解析/合成往返/ID 冲突/回退用例；埋点分组 tag=`optimize/patch`（patch 优先契约）/`optimize/full`（回退重发）/`optimize`（实体通道），分析用 `tools/llm_stats_report.py`（debug 包 adb 拉取 llm_stats.jsonl，A/B 对比自动判定 40% 阈值与回退率）。**真机验证（v1.2.44，7 模型 × 12 路）**：patch 均值输出 1135 token vs 完整模型基线 2703，**降 58%（比值 ≈42%，略高于 ≤40% 判据，未达标但方向正确）**；解析/合成失败仅 1/94；回退率 11%。**v1.2.45 增补**：①**空补丁判失败**——合成结果与原模型全等（qwen none 档实测 230 token 废稿形态）按应用失败处理、触发完整模型回退重发，`OptimizeTest` 空补丁用例；②**最小改动硬约束**进提示词（中英）：patch 只允许出现与改造直接相关的构件，禁止把全部杆件列进 modify_members"顺手复述"，文案字段限长。**通用性：仅改输出格式，适用场景与完整模型完全等价** |
+| O-08 | M | **【设计中，目标 v1.2.43】**高频生活场景（简支层板/搁板、悬臂杆）的体系级改造方案高度雷同，每次仍付一次 LLM 完整推理 | **体系级改造确定性模板（D 方案）**。①新增 `OptimizeTemplates`（纯 Kotlin 确定性代码）：首版只实现 T1「最长简支跨跨中新增节点+竖向铰支座 → 连续梁」、T2「悬臂自由端附近加斜撑/拉杆」；触发条件由 `FrameProfile` 显式判定（存在简支跨/悬臂、支承方向与几何合法、新增支座/杆件不与现有节点冲突），**任何一项不明确即不触发**。②模板候选立即本地求解验证，**安全系数无改善不呈现**；命中时作为方案 1（天然满足 O-01 体系级优先），UI 标注"本地模板方案"。③与 LLM 路径并行：模板命中不取消 O-05 流水线的 LLM 补充方案（首期也可设为"模板命中即不再调用 LLM"，以真机耗时数据定夺）；LLM 仅负责解释与补充。④**未命中任何模板 → 走现行 LLM 全流程，行为与 v1.2.42 完全一致，通用性零损失**。⑤模板产物与 LLM 方案过同一套 O-03 校验与求解验证，无旁路（总原则 4）。判据：模板方案从点击到呈现 ≤2s（仅本地求解耗时）；未命中场景回归测试与基线逐项一致。Evidence：`OptimizeTest` 模板触发/几何非法不触发/未命中回退用例；真机 llm_stats 显示命中时 optimize 调用数下降。后续新模板只按 case_log 中"反复走 LLM 且方案雷同"的场景沉淀，不凭空扩列 |
+
+**O-07/O-08 实施指引（供执行改动的模型阅读）**：改动集中在 `OptimizeLogic.kt`（提示词契约、`OptimizeSession` 流水线、`OptimizePatchApplier`/`OptimizeTemplates` 新增）、`Models.kt`（patch 数据类）、`OptimizeTest.kt`（新用例）；`FrameProfile`、`OptimizeDiff`、`verifyOne`、O-05/O-06 机制**复用不重写**；两条规则可分期实施，建议 O-07 先行（收益确定、不依赖模板设计），O-08 随后；实施完成后将本条状态改为"已实施（版本号）"并附真机 llm_stats 对比，同时更新 §五检查单与 §六镜像表。
 
 ## 五、新增/变更入口的检查单
 
@@ -154,7 +159,7 @@
 | 重试预算 RTR-01 | `AiParser.parseFrameWithRetry`（`MAX_SEMANTIC_RETRIES`、`MAX_TOTAL_ATTEMPTS`） | — |
 | 案例埋点 LOG-01 | `PythonBridge.kt`、`ChatSession.newCaseMeta()` | `bridge.py`、`case_log.py` |
 | 提示词与成本 P 类 | `ChatSession.kt`（提示词常量）、`FrameOutputSchema.kt`、`LlmClient.kt`（reasoning_effort、usage 采集 `extractUsage`/`LlmCallStat`）、`AppContainer.kt`（llm_stats.jsonl 落盘接线）、`SettingsRepository.kt`（默认档）、`PromptTokenBudgetTest.kt`（离线测量）、`LlmClientTest.kt`（采集层测试） | — |
-| 优化策略 O 类 | `OptimizeLogic.kt`（`OptimizeSession` `PROMPT_ZH`/`PROMPT_EN` 策略段与硬性约束、`OptimizeDiff` 防作弊校验） | — |
+| 优化策略 O 类 | `OptimizeLogic.kt`（`OptimizeSession` `PROMPT_ZH`/`PROMPT_EN` 策略段与硬性约束、`OptimizeDiff` 防作弊校验、`OptimizePatch`/`OptimizePatchApplier` 增量补丁合成（O-07）） | — |
 
 ## 七、初步测量数据（2026-11-19，JVM harness 离线估算）
 

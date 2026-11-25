@@ -965,6 +965,15 @@ class LlmClientTest {
         )
         val bKimi = kimi.buildRequestBody(messages, jsonMode = true, withSeed = false).jsonObject
         assertEquals("low", bKimi["reasoning_effort"]!!.jsonPrimitive.content)
+        // qwen 系列同样不支持 none（实测返回空补丁废稿）：Custom 快速模式下限 low
+        val qwen = LlmClientImpl(
+            baseUrl = "https://dashscope.example.com/compatible-mode/v1", apiKey = "k",
+            model = "qwen4-max", reasoningEffort = "none", language = "zh", httpClient = OkHttpClient()
+        )
+        val bQwen = qwen.buildRequestBody(
+            messages, jsonMode = true, withSeed = false, includeReasoningNone = true
+        ).jsonObject
+        assertEquals("qwen 快速模式应落到 low 而非 none", "low", bQwen["reasoning_effort"]!!.jsonPrimitive.content)
     }
 
     @Test

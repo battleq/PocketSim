@@ -1012,28 +1012,20 @@ NEVER use out_of_scope for that case.""".trimIndent()
             不要输出任何解释、代码围栏或其他文字。
         """.trimIndent()
 
-        /** 自动判别（P3D-5）：能平面表达就用 2D，确实空间受力才输出 dim=3 */
+        /** 自动判别（P3D-5，v1.2.45 起 3D 优先）：默认三维建模，仅用户明确要求平面简化时才 2D */
         private val DIM_RULES_AUTO = """
-            先判断结构能否用一个竖直平面（x 向右、y 向上）完整表达：
-            - 能（大多数书架、桌子、晾衣架、墙面支架、栏杆）：按平面建模，dim 填 2 或省略，
-              节点只写 x/y，力用 fx/fy，均布用 qy，支座用 fixed/pinned/roller；
-            - 不能（4 条以上落地腿的空间桌架、多方向门式刚架、杆件不共面、存在面外载荷
-              或扭矩）：改用三维约定，dim 填 3：
-              · x、y 组成水平面，z 竖直向上，地面 z=0，重力沿 -z（不要用 y 当竖直方向）；
-              · 节点写 {"id":..,"x":..,"y":..,"z":..}；
-              · 支座用 fixed/pinned/roller/roller_x/roller_y，必要时用 "fix":["rx"] 等额外约束；
-              · 集中力用 fx/fy/fz 与 mx/my/mz（N、N·mm），均布用 qx/qy/qz（N/mm）；
-              · width_b 是截面水平横向宽度，depth_h 是竖直方向高度（强轴）。
+            默认按三维建模（用户已确认 3D 质量更好，宁可多花时间）：dim 填 3：
+            - x、y 组成水平面，z 竖直向上，地面 z=0，重力沿 -z（不要用 y 当竖直方向）；
+            - 节点写 {"id":..,"x":..,"y":..,"z":..}；
+            - 支座用 fixed/pinned/roller/roller_x/roller_y，必要时用 "fix":["rx"] 等额外约束；
+            - 集中力用 fx/fy/fz 与 mx/my/mz（N、N·mm），均布用 qx/qy/qz（N/mm）；
+            - width_b 是截面水平横向宽度，depth_h 是竖直方向高度（强轴）。
+            仅当用户明确说"平面/二维/2D 建模"时才用平面约定：竖直平面 x 向右、y 向上，
+            dim 填 2 或省略，节点只写 x/y，力用 fx/fy，均布用 qy，支座用 fixed/pinned/roller。
         """.trimIndent()
 
-        /** 自动模式示例：先给平面的短例，再给空间的短例（两端固定门架 + 跨中挂重） */
+        /** 自动模式示例（v1.2.45 起 3D 优先）：先给三维短例，再给用户明确要平面时的平面短例 */
         private val EXAMPLE_AUTO = """
-            {"ready":true,"questions":[],"model":{"name":"两层书架",
-            "nodes":[{"id":1,"x":0,"y":0},{"id":2,"x":600,"y":0}],
-            "members":[{"id":1,"i":1,"j":2,"width_b":30,"depth_h":40,"material":"松木"}],
-            "supports":[{"node":1,"type":"fixed"}],
-            "loads":[{"type":"force","node":2,"fy":-294}]}}
-            或（确实是空间结构时）
             {"ready":true,"questions":[],"model":{"name":"门式刚架","dim":3,
             "nodes":[{"id":1,"x":0,"y":0,"z":0},{"id":2,"x":0,"y":0,"z":2000},
             {"id":3,"x":2000,"y":0,"z":0},{"id":4,"x":2000,"y":0,"z":2000},
@@ -1044,11 +1036,17 @@ NEVER use out_of_scope for that case.""".trimIndent()
             {"id":4,"i":5,"j":4,"width_b":80,"depth_h":120,"material":"低碳钢"}],
             "supports":[{"node":1,"type":"fixed"},{"node":3,"type":"fixed"}],
             "loads":[{"type":"force","node":5,"fz":-980}]}}
+            或（仅当用户明确要求平面/2D 建模时）
+            {"ready":true,"questions":[],"model":{"name":"两层书架","dim":2,
+            "nodes":[{"id":1,"x":0,"y":0},{"id":2,"x":600,"y":0}],
+            "members":[{"id":1,"i":1,"j":2,"width_b":30,"depth_h":40,"material":"松木"}],
+            "supports":[{"node":1,"type":"fixed"}],
+            "loads":[{"type":"force","node":2,"fy":-294}]}}
         """.trimIndent()
 
         /**
-         * 通用结构默认的自动判别提示词（P3D-5）：AI 自行判断平面还是空间；
-         * 返回 dim=2 走 2D 求解器与线框图，dim=3 走空间梁求解器与三维视图。
+         * 通用结构默认的自动判别提示词（P3D-5，v1.2.45 起 3D 优先）：默认输出 dim=3
+         * 走空间梁求解器与三维视图，仅用户明确要求平面时才 dim=2 走 2D 求解器。
          */
         val FRAME_AUTO_SYSTEM_PROMPT = FRAME_PROMPT_TEMPLATE
             .replace("{{DIM_RULES}}", DIM_RULES_AUTO)

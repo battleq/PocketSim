@@ -405,8 +405,8 @@ object AiParser {
         return reply.copy(suggestions = validated)
     }
 
-    /** 复用建模链路的归一化 + 自动补约束 + 物理校验，返回规范化模型 JSON */
-    private fun validateOptimizeModel(modelJson: String, kind: OptimizeKind): String? {
+    /** 复用建模链路的归一化 + 自动补约束 + 物理校验，返回规范化模型 JSON（O-07：供优化通道合成补丁后校验） */
+    internal fun validateOptimizeModel(modelJson: String, kind: OptimizeKind): String? {
         val modelEl = AppJson.parseToJsonElement(modelJson)
         if (modelEl !is JsonObject) return null
         return when (kind) {
