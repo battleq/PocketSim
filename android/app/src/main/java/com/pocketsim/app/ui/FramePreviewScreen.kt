@@ -637,6 +637,11 @@ private fun FrameModelCanvas(model: FrameModel, modifier: Modifier) {
                 color = 0xFF607D8B.toInt()
                 textAlign = android.graphics.Paint.Align.CENTER
             }
+            val dimPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 9.sp.toPx()
+                color = 0xFF607D8B.toInt()
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
             nodes.forEach { n ->
                 nc.drawText("${n.id}", px(n.x), py(n.y) - 12f, paint)
             }
@@ -644,6 +649,14 @@ private fun FrameModelCanvas(model: FrameModel, modifier: Modifier) {
                 val a = nodePos(m.i) ?: return@forEach
                 val b = nodePos(m.j) ?: return@forEach
                 nc.drawText("${m.id}", (a.x + b.x) / 2f, (a.y + b.y) / 2f - 6f, memberPaint)
+                if (hypot(a.x - b.x, a.y - b.y) >= 18f) {
+                    val na = nodeMap[m.i] ?: return@forEach
+                    val nb = nodeMap[m.j] ?: return@forEach
+                    nc.drawText(
+                        memberLengthLabel(WorldPoint(na.x, na.y, 0.0), WorldPoint(nb.x, nb.y, 0.0)),
+                        (a.x + b.x) / 2f, (a.y + b.y) / 2f + 12f, dimPaint
+                    )
+                }
             }
         }
     }

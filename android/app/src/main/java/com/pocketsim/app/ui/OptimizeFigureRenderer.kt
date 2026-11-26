@@ -19,7 +19,9 @@ import com.pocketsim.app.FrameNode
 import com.pocketsim.app.FrameSupport
 import com.pocketsim.app.ModelDiff
 import com.pocketsim.app.SolidGenericModel
+import com.pocketsim.app.Units
 import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -170,6 +172,24 @@ object OptimizeFigureRenderer {
                 val ring = if (box.memberId in diff.addedMemberIds) NEW else MOD
                 drawBubble(c, p.x, p.y, "#${box.memberId}", ring, heightPx * 0.021f)
             }
+
+        // 杆件长度标注（全部杆件，锚定中点下方；交互预览随旋转缩放联动，PNG 导出同步带尺寸）
+        val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = heightPx * 0.018f
+            color = TEXT_FAINT
+            textAlign = Paint.Align.CENTER
+        }
+        model.members.forEach { m ->
+            val a = nodes[m.i] ?: return@forEach
+            val b = nodes[m.j] ?: return@forEach
+            val wa = world(a); val wb = world(b)
+            val pa = projector.project(wa); val pb = projector.project(wb)
+            if (hypot(pa.x - pb.x, pa.y - pb.y) < heightPx * 0.02f) return@forEach
+            c.drawText(
+                memberLengthLabel(wa, wb),
+                (pa.x + pb.x) / 2f, (pa.y + pb.y) / 2f + heightPx * 0.022f, dimPaint
+            )
+        }
 
         c.restore()
         drawLegend(c, labels, widthPx, heightPx, footerH)
@@ -387,6 +407,14 @@ object OptimizeFigureRenderer {
                 }
             }
         }
+
+        // 轮廓尺寸行（静态等轴测示意图，无旋转），放在图形与变化列表之间
+        val dimsLine = when (g.type.trim().lowercase()) {
+            "cylinder" -> "\u2300${Units.meters((g.radius_m ?: 0.0) * 2.0)} m \u00d7 ${Units.meters(g.height_m ?: 0.0)} m"
+            "plate" -> "${Units.meters(g.length_m ?: 0.0)} m \u00d7 ${Units.meters(g.thickness_m ?: 0.0)} m \u00d7 ${Units.meters(g.width_m ?: 0.0)} m"
+            else -> "${Units.meters(g.length_m ?: 0.0)} m \u00d7 ${Units.meters(g.thickness_m ?: 0.0)} m \u00d7 ${Units.meters(g.height_m ?: 0.0)} m"
+        }
+        drawCentered(c, dimsLine, widthPx / 2f, bottom + heightPx * 0.015f, heightPx * 0.022f, TEXT_FAINT)
 
         // 变化项逐条列出（尺寸/材料），便于理解"改了什么"
         val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

@@ -109,4 +109,13 @@ class Frame3DPlotMathTest {
         )
         assertFalse(is3dPolyline(r2d))
     }
+
+    /** 杆件长度文案：整数不带小数，小数保留 1 位，3D 斜杆取欧氏距离，单位 mm */
+    @Test
+    fun memberLengthLabelFormats() {
+        assertEquals("2400 mm", memberLengthLabel(WorldPoint(0.0, 0.0, 0.0), WorldPoint(2400.0, 0.0, 0.0)))
+        assertEquals("1234.5 mm", memberLengthLabel(WorldPoint(0.0, 0.0, 0.0), WorldPoint(1234.5, 0.0, 0.0)))
+        assertEquals("5 mm", memberLengthLabel(WorldPoint(0.0, 0.0, 0.0), WorldPoint(3.0, 4.0, 0.0)))
+        assertEquals("3 mm", memberLengthLabel(WorldPoint(0.0, 0.0, 0.0), WorldPoint(1.0, 2.0, 2.0)))
+    }
 }

@@ -354,7 +354,8 @@ fun SolidGenericResultScreen(
                                 render = render,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(300.dp)
+                                    .height(300.dp),
+                                dimLabels = solidOutlineDims(model)
                             )
                             val vmax = render.values.maxOrNull() ?: Units.stress(result.metrics.max_von_mises_MPa).value
                             val stressLowFmt = stringResource(R.string.solid_stress_low_fmt)

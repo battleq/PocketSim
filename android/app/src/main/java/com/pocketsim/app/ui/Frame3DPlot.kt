@@ -152,6 +152,20 @@ class SceneProjector(
 fun <T> painterOrder(items: List<T>, depthOf: (T) -> Double): List<T> =
     items.sortedByDescending(depthOf)
 
+/** 杆件世界长度标注文案（mm，整数不带小数，否则 1 位小数 + " mm"） */
+internal fun memberLengthLabel(a: WorldPoint, b: WorldPoint): String {
+    val dx = b.x - a.x
+    val dy = b.y - a.y
+    val dz = b.z - a.z
+    val len = sqrt(dx * dx + dy * dy + dz * dz)
+    val text = if (len == len.toLong().toDouble()) {
+        len.toLong().toString()
+    } else {
+        "%.1f".format(len)
+    }
+    return "$text mm"
+}
+
 /** 网格间距取整（1/2/5×10^n），让坐标系刻度落在整数上 */
 internal fun niceStep(rough: Double): Double {
     if (rough <= 0.0 || !rough.isFinite()) return 1.0
@@ -196,6 +210,7 @@ fun Frame3DPlot(
     showNodeLabels: Boolean = true
 ) {
     var view by remember { mutableStateOf(View3D()) }
+    var showDims by remember { mutableStateOf(true) }
 
     Box(modifier = modifier) {
         Canvas(
@@ -390,6 +405,10 @@ fun Frame3DPlot(
             if (showNodeLabels) {
                 drawLabels3d(model, projector)
             }
+            // 仅预览模式标杆件原始长度：结果页是变形后形状，标原始长度会误导
+            if (showDims && result == null) {
+                drawDimLabels3d(model, projector)
+            }
         }
 
         // 视角重置（拖动/缩放后一键回到默认视角）
@@ -399,6 +418,14 @@ fun Frame3DPlot(
                 .padding(2.dp),
             horizontalArrangement = Arrangement.End
         ) {
+            TextButton(onClick = { showDims = !showDims }) {
+                Text(
+                    text = stringResource(R.string.frame_3d_dims),
+                    fontSize = 11.sp,
+                    color = if (showDims) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             TextButton(onClick = { view = View3D() }) {
                 Text(
                     text = stringResource(R.string.frame_3d_reset),
@@ -717,5 +744,29 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLabels3d(
         val pa = projector.project(WorldPoint(a.x, a.y, a.z))
         val pb = projector.project(WorldPoint(b.x, b.y, b.z))
         nc.drawText("${m.id}", (pa.x + pb.x) / 2f, (pa.y + pb.y) / 2f - 4f, memberPaint)
+    }
+}
+
+/** 杆件长度标注：预览模式下在杆件中点下方显示原始长度（mm），屏幕过短的杆件跳过 */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDimLabels3d(
+    model: FrameModel,
+    projector: SceneProjector
+) {
+    val nc = drawContext.canvas.nativeCanvas
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 8.sp.toPx()
+        color = 0xFF607D8B.toInt()
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+    val minScreen = 18f
+    val nodeMap = model.nodes.associateBy { it.id }
+    model.members.forEach { m ->
+        val a = nodeMap[m.i] ?: return@forEach
+        val b = nodeMap[m.j] ?: return@forEach
+        val pa = projector.project(WorldPoint(a.x, a.y, a.z))
+        val pb = projector.project(WorldPoint(b.x, b.y, b.z))
+        if (hypot(pa.x - pb.x, pa.y - pb.y) < minScreen) return@forEach
+        val label = memberLengthLabel(WorldPoint(a.x, a.y, a.z), WorldPoint(b.x, b.y, b.z))
+        nc.drawText(label, (pa.x + pb.x) / 2f, (pa.y + pb.y) / 2f + 10.dp.toPx(), paint)
     }
 }

@@ -7,7 +7,9 @@
 package com.pocketsim.app.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -593,8 +596,21 @@ private fun SolidGenericSketch(model: SolidGenericModel, modifier: Modifier) {
     val thicknessFmt = stringResource(R.string.solid_dim_thickness_fmt)
     val selfWeightLabel = stringResource(R.string.solid_generic_label_selfweight)
 
-    Canvas(modifier = modifier) {
-        val view = View3D(yawDeg = 34.0, pitchDeg = 18.0)
+    var view by remember { mutableStateOf(View3D(yawDeg = 34.0, pitchDeg = 18.0)) }
+    Box(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        view = view.copy(
+                            yawDeg = view.yawDeg + pan.x * 0.35,
+                            pitchDeg = (view.pitchDeg + pan.y * 0.35).coerceIn(-85.0, 85.0),
+                            zoom = (view.zoom * zoom).coerceIn(0.4f, 4f)
+                        )
+                    }
+                }
+        ) {
         // Python 坐标（x=长、y=高/宽、z=厚）→ 显示坐标（View3D 以 z 为屏幕竖直）：
         // 始终把模型的竖直轴（upAxis）映射到屏幕竖直方向，自重箭头才会真正朝下
         fun wp(x: Double, y: Double, z: Double) = when (upAxis) {
@@ -896,5 +912,53 @@ private fun SolidGenericSketch(model: SolidGenericModel, modifier: Modifier) {
                 (p[1].x + p[5].x) / 2f + 6.dp.toPx(),
                 (p[1].y + p[5].y) / 2f - 8.dp.toPx(), paint)
         }
+        }
+        // 视角重置（拖动/缩放后一键回到默认视角）
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(2.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(onClick = { view = View3D(yawDeg = 34.0, pitchDeg = 18.0) }) {
+                Text(
+                    text = stringResource(R.string.frame_3d_reset),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 通用实体显示坐标三轴的尺寸文案（display x / display y / display z），
+ * 与 [SolidGenericSketch] 的 wp() 轴映射口径一致；空串表示该轴跳过标注。
+ * 供结果页应力云图（SolidStressPlot）复用，保证预览与结果页尺寸一致。
+ */
+@Composable
+internal fun solidOutlineDims(model: SolidGenericModel): Triple<String, String, String> {
+    val g = model.geometry
+    val type = g.type.trim().lowercase()
+    val isCylinder = type == "cylinder"
+    val isPlate = type == "plate"
+    val L = if (isCylinder) (g.radius_m ?: 0.0) * 2.0 else g.length_m ?: 0.1
+    val H = if (isPlate) g.width_m ?: 0.1 else g.height_m ?: 0.1
+    val T = if (isCylinder) (g.radius_m ?: 0.0) * 2.0 else g.thickness_m ?: 0.1
+    val diameterFmt = stringResource(R.string.solid_generic_dim_diameter_fmt)
+    val lengthFmt = stringResource(R.string.solid_dim_length_fmt)
+    val widthFmt = stringResource(R.string.solid_generic_dim_width_fmt)
+    val heightFmt = stringResource(R.string.solid_dim_height_fmt)
+    val thicknessFmt = stringResource(R.string.solid_dim_thickness_fmt)
+    fun semL() = if (isCylinder) diameterFmt.format(Units.meters(L).toString())
+    else lengthFmt.format(Units.meters(L).toString())
+    fun semH() = if (isPlate) widthFmt.format(Units.meters(H).toString())
+    else heightFmt.format(Units.meters(H).toString())
+    fun semT() = if (isCylinder) diameterFmt.format(Units.meters(T).toString())
+    else thicknessFmt.format(Units.length(T * 1000.0).toString())
+    return when (defaultUpAxis(g)) {
+        "z" -> Triple(semL(), semH(), semT())   // display x=L, y=H, z=T
+        "x" -> Triple(semH(), semT(), semL())   // display x=H, y=T, z=L
+        else -> Triple(semL(), semT(), semH())  // display x=L, y=T, z=H
     }
 }

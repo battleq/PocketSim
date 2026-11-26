@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -827,6 +828,26 @@ private fun FrameDeformPlot(
                 path.lineTo(px(ox(pt) + dx(pt) * deformScale), py(oy(pt) + dy(pt) * deformScale))
             }
             drawPath(path, ColorRamp.colorAt(t), style = Stroke(4.dp.toPx(), cap = StrokeCap.Round))
+        }
+
+        // 杆件原始长度标注（锚定原始形状中点，仅标原始长度不标变形后长度）
+        val nc = drawContext.canvas.nativeCanvas
+        val dimPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = 9.sp.toPx()
+            color = 0xFF607D8B.toInt()
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+        kept.forEach { pl ->
+            if (pl.pts.size < 2) return@forEach
+            val a = pl.pts.first()
+            val b = pl.pts.last()
+            val ax = px(ox(a)); val ay = py(oy(a)); val bx = px(ox(b)); val by = py(oy(b))
+            if (hypot(ax - bx, ay - by) < 18f) return@forEach
+            val label = memberLengthLabel(
+                WorldPoint(ox(a).toDouble(), oy(a).toDouble(), 0.0),
+                WorldPoint(ox(b).toDouble(), oy(b).toDouble(), 0.0)
+            )
+            nc.drawText(label, (ax + bx) / 2f, (ay + by) / 2f + 12f, dimPaint)
         }
     }
 }

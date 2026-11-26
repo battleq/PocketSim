@@ -224,6 +224,7 @@
     <string name="frame_deform_note">实线为变形后形状（按放大系数显示），虚线为原始形状</string>
     <string name="frame_3d_hint">三维视图：单指拖动旋转 · 双指捏合缩放</string>
     <string name="frame_3d_reset">重置视角</string>
+    <string name="frame_3d_dims">尺寸</string>
     <string name="frame_buckling_title">稳定性</string>
     <string name="frame_thermal_title">温度</string>
     <string name="frame_thermal_max_dt_fmt">最大温度变化：%1$s°C（基准 20°C）</string>

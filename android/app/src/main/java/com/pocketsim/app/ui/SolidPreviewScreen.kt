@@ -8,7 +8,9 @@ package com.pocketsim.app.ui
 
 import android.content.Context
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -423,9 +426,22 @@ private fun SolidWallSketch(model: SolidWallModel, modifier: Modifier) {
     val labelThickness = stringResource(R.string.solid_dim_thickness_fmt, Units.length(t * 1000).toString())
     val labelWind = stringResource(R.string.solid_wind_arrow)
 
-    Canvas(modifier = modifier) {
+    var view by remember { mutableStateOf(View3D(yawDeg = 34.0, pitchDeg = 18.0)) }
+    Box(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        view = view.copy(
+                            yawDeg = view.yawDeg + pan.x * 0.35,
+                            pitchDeg = (view.pitchDeg + pan.y * 0.35).coerceIn(-85.0, 85.0),
+                            zoom = (view.zoom * zoom).coerceIn(0.4f, 4f)
+                        )
+                    }
+                }
+        ) {
         // 世界坐标：x 沿墙长、y 沿墙厚、z 竖直（与 Frame3DPlot 的投影约定一致）
-        val view = View3D(yawDeg = 34.0, pitchDeg = 18.0)
         fun wp(x: Double, y: Double, z: Double) = WorldPoint(x, y, z)
 
         // 8 个角点：0-3 地面（前左/前右/后右/后左），4-7 顶部同序
@@ -550,5 +566,21 @@ private fun SolidWallSketch(model: SolidWallModel, modifier: Modifier) {
             p[0].y + 42.dp.toPx(),
             paint
         )
+        }
+        // 视角重置（拖动/缩放后一键回到默认视角）
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(2.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(onClick = { view = View3D(yawDeg = 34.0, pitchDeg = 18.0) }) {
+                Text(
+                    text = stringResource(R.string.frame_3d_reset),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     }
 }

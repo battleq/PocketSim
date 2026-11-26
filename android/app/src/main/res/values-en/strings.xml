@@ -223,6 +223,7 @@
     <string name="frame_deform_note">Solid = deformed shape (scaled), dashed = original shape</string>
     <string name="frame_3d_hint">3D view: one-finger drag to rotate · two-finger pinch to zoom</string>
     <string name="frame_3d_reset">Reset view</string>
+    <string name="frame_3d_dims">Dims</string>
     <string name="frame_buckling_title">Stability</string>
     <string name="frame_thermal_title">Thermal</string>
     <string name="frame_thermal_max_dt_fmt">Max ΔT: %1$s°C (ref 20°C)</string>

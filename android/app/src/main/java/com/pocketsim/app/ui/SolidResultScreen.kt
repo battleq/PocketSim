@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -224,11 +225,26 @@ fun SolidResultScreen(
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
+                            val wallDimLabels = Triple(
+                                stringResource(
+                                    R.string.solid_dim_length_fmt,
+                                    Units.meters(model.wall.length_m).toString()
+                                ),
+                                stringResource(
+                                    R.string.solid_dim_thickness_fmt,
+                                    Units.length(model.wall.thickness_m * 1000.0).toString()
+                                ),
+                                stringResource(
+                                    R.string.solid_dim_height_fmt,
+                                    Units.meters(model.wall.height_m).toString()
+                                )
+                            )
                             SolidStressPlot(
                                 render = render,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(300.dp)
+                                    .height(300.dp),
+                                dimLabels = wallDimLabels
                             )
                             val vmax = render.values.maxOrNull() ?: Units.stress(result.metrics.max_stress_MPa).value
                             ColorLegend(
@@ -429,7 +445,11 @@ private val SOLID_VIEW = View3D(yawDeg = 34.0, pitchDeg = 20.0)
  *  - 单指拖拽旋转、双指捏合缩放，右上角重置视角。
  */
 @Composable
-fun SolidStressPlot(render: SolidRenderData, modifier: Modifier = Modifier) {
+fun SolidStressPlot(
+    render: SolidRenderData,
+    modifier: Modifier = Modifier,
+    dimLabels: Triple<String, String, String>? = null
+) {
     var view by remember { mutableStateOf(SOLID_VIEW) }
 
     Box(modifier = modifier) {
@@ -508,6 +528,35 @@ fun SolidStressPlot(render: SolidRenderData, modifier: Modifier = Modifier) {
                 }
                 drawPath(path, f.color)
                 drawPath(path, Color(0xFF212121).copy(alpha = 0.10f), style = Stroke(0.8f))
+            }
+
+            // 外轮廓尺寸标注（display x / y / z 三轴，空串跳过），锚定世界包围盒棱边，随视角联动
+            dimLabels?.let { (xLabel, yLabel, zLabel) ->
+                val xs = worldPoints.map { it.x }
+                val ys = worldPoints.map { it.y }
+                val zs = worldPoints.map { it.z }
+                val minX = xs.minOrNull() ?: 0.0; val maxX = xs.maxOrNull() ?: 0.0
+                val minY = ys.minOrNull() ?: 0.0; val maxY = ys.maxOrNull() ?: 0.0
+                val minZ = zs.minOrNull() ?: 0.0; val maxZ = zs.maxOrNull() ?: 0.0
+                val nc = drawContext.canvas.nativeCanvas
+                val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    textSize = 11.sp.toPx()
+                    color = android.graphics.Color.DKGRAY
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                if (xLabel.isNotEmpty()) {
+                    val p = projector.project(WorldPoint((minX + maxX) / 2, minY, minZ))
+                    nc.drawText(xLabel, p.x, p.y + 18.dp.toPx(), paint)
+                }
+                if (yLabel.isNotEmpty()) {
+                    val p = projector.project(WorldPoint(maxX, (minY + maxY) / 2, maxZ))
+                    nc.drawText(yLabel, p.x, p.y - 8.dp.toPx(), paint)
+                }
+                if (zLabel.isNotEmpty()) {
+                    val p = projector.project(WorldPoint(maxX, minY, (minZ + maxZ) / 2))
+                    paint.textAlign = android.graphics.Paint.Align.LEFT
+                    nc.drawText(zLabel, p.x + 6.dp.toPx(), p.y, paint)
+                }
             }
         }
 
